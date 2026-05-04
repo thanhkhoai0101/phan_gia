@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "70971161005",
+    "project_id": "phan-family",
+    "storage_bucket": "phan-family.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:70971161005:android:7b63f6575c1d0546608924",
+        "android_client_info": {
+          "package_name": "com.phan.phan_family"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "70971161005-6h8eju0pbocqeotn685va942tkm6bd86.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.phan.phan_family",
+            "certificate_hash": "5d596ad73f86ace2ae336fdc6ffb56267b19eb93"
+          }
+        },
+        {
+          "client_id": "70971161005-2qm5k465qrbpg9drsslm3fo8kshc0pkj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsqZQCl2D0ZVY3EXgFlkX45GALBYkldb8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "70971161005-2qm5k465qrbpg9drsslm3fo8kshc0pkj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "70971161005-2ci3brg00gqkrnp3o997o68g65609veg.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.phan.phanFamily"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
