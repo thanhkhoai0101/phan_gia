@@ -2,24 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
+import 'package:phan_family/services/auth_service.dart';
 import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
 import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
-
-import 'features/auth/services/auth_service.dart';
-import 'features/auth/bloc/auth_bloc.dart';
-import 'features/auth/bloc/auth_state.dart';
-import 'features/auth/screens/login_screen.dart';
-import 'features/chat/screens/chat_detail_screen.dart';
-import 'features/games/tien_len/screens/tien_len_room_screen.dart';
+import 'blocs/auth/auth_bloc.dart';
+import 'blocs/auth/auth_state.dart';
+import 'blocs/theme/theme_bloc.dart';
+import 'blocs/theme/theme_state.dart';
+import 'blocs/feed/feed_bloc.dart';
+import 'services/feed_service.dart';
+import 'features/auth/login_screen.dart';
+import 'features/chat/chat_detail_screen.dart';
+import 'features/games/screens/tien_len/tien_len_room_screen.dart';
 import 'features/main_nav/main_nav_screen.dart';
-import 'core/services/notification_service.dart';
-import 'core/models/user_model.dart';
+import 'services/notification_service.dart';
+import 'models/user_model.dart';
 import 'firebase_options.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -34,10 +37,15 @@ void main() async {
 
   ZegoUIKitPrebuiltCallInvitationService().setNavigatorKey(NotificationService.navigatorKey);
 
+  // Load saved theme preference
+  final bool isDarkMode = await ThemeBloc.loadSavedDarkMode();
+
   runApp(
     MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(create: (context) => AuthBloc(authService: AuthService())),
+        BlocProvider<ThemeBloc>(create: (context) => ThemeBloc(initialDark: isDarkMode)),
+        BlocProvider<FeedBloc>(create: (context) => FeedBloc(feedService: FeedService())),
       ],
       child: const MyApp(),
     ),
@@ -50,8 +58,8 @@ class MyApp extends StatelessWidget {
   void onUserLogin(UserModel user) {
     NotificationService.updateToken(user.uid);
     ZegoUIKitPrebuiltCallInvitationService().init(
-      appID: 412261045,
-      appSign: '056c2a653b08645f7604a20598e6a15abd17d7b39e272235609ba06e0aec06ac',
+      appID: 332535805,
+      appSign: '69ad138a7a325207f10a27865542726ead7f623ec01cbbd625e9765301e52308',
       userID: user.uid,
       userName: user.displayName,
       plugins: [ZegoUIKitSignalingPlugin()],
@@ -91,87 +99,174 @@ class MyApp extends StatelessWidget {
           onUserLogout();
         }
       },
-      child: MaterialApp(
-        navigatorKey: NotificationService.navigatorKey,
-        title: 'Phan Gia',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          brightness: Brightness.dark,
-          primaryColor: const Color(0xFF1A374D),
-          scaffoldBackgroundColor: const Color(0xFF0F1B2A),
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF1A374D),
-            brightness: Brightness.dark,
-            primary: const Color(0xFF1A374D),
-            secondary: const Color(0xFFFF6B6B),
-            surface: const Color(0xFF162435),
-            surfaceContainerHigh: const Color(0xFF0F1B2A),
-          ),
-          dialogTheme: DialogThemeData(
-            backgroundColor: const Color(0xFF162435),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          ),
-          cardTheme: CardThemeData(
-            color: const Color(0xFF1A2A3A),
-            elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          ),
-          chipTheme: ChipThemeData(
-            backgroundColor: Colors.white10,
-            selectedColor: const Color(0xFFFF6B6B),
-            labelStyle: const TextStyle(color: Colors.white),
-            secondaryLabelStyle: const TextStyle(color: Colors.white),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFF0F1B2A),
-            surfaceTintColor: Colors.transparent,
-            centerTitle: true,
-            titleTextStyle: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF6B6B),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        ),
-        builder: (context, child) {
-          return GlobalInviteListener(child: child!);
-        },
-        onGenerateRoute: (settings) {
-          if (settings.name == '/chat_detail') {
-            final args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(
-              builder: (context) => ChatDetailScreen(
-                chatId: args['chatId'],
-                otherUserName: args['otherUserName'],
-                otherUserId: args['otherUserId'],
+      child: BlocBuilder<ThemeBloc, ThemeState>(
+        builder: (context, themeState) {
+          return MaterialApp(
+            navigatorKey: NotificationService.navigatorKey,
+            title: 'Phan Gia',
+            debugShowCheckedModeBanner: false,
+            themeMode: themeState.themeMode,
+            // ─── DARK THEME ─────────────────────────────────────────────
+            darkTheme: ThemeData(
+              useMaterial3: true,
+              brightness: Brightness.dark,
+              primaryColor: const Color(0xFFF57C00),
+              scaffoldBackgroundColor: const Color(0xFF0F1B2A),
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFFF57C00),
+                brightness: Brightness.dark,
+                primary: const Color(0xFFF57C00),
+                secondary: const Color(0xFFFFB300),
+                surface: const Color(0xFF162435),
+                surfaceContainerHigh: const Color(0xFF0F1B2A),
               ),
-            );
-          } else if (settings.name == '/tien_len_room') {
-            final args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(
-              builder: (context) => TienLenRoomScreen(roomId: args['roomId']),
-            );
-          }
-          return null;
+              dialogTheme: DialogThemeData(
+                backgroundColor: const Color(0xFF162435),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+              cardTheme: CardThemeData(
+                color: const Color(0xFF1A2A3A),
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              ),
+              chipTheme: ChipThemeData(
+                backgroundColor: Colors.white10,
+                selectedColor: const Color(0xFFFFB300),
+                labelStyle: const TextStyle(color: Colors.white),
+                secondaryLabelStyle: const TextStyle(color: Colors.white),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Color(0xFF0F1B2A),
+                surfaceTintColor: Colors.transparent,
+                centerTitle: true,
+                foregroundColor: Colors.white,
+                titleTextStyle: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              elevatedButtonTheme: ElevatedButtonThemeData(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF57C00),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              navigationBarTheme: NavigationBarThemeData(
+                backgroundColor: const Color(0xFF0F1B2A),
+                indicatorColor: const Color(0xFFF57C00).withOpacity(0.2),
+                iconTheme: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return const IconThemeData(color: Color(0xFFF57C00));
+                  }
+                  return const IconThemeData(color: Colors.white54);
+                }),
+                labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return const TextStyle(color: Color(0xFFF57C00), fontWeight: FontWeight.bold);
+                  }
+                  return const TextStyle(color: Colors.white54);
+                }),
+              ),
+            ),
+            // ─── LIGHT THEME ─────────────────────────────────────────────
+            theme: ThemeData(
+              useMaterial3: true,
+              brightness: Brightness.light,
+              primaryColor: const Color(0xFFF57C00),
+              scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFFF57C00),
+                brightness: Brightness.light,
+                primary: const Color(0xFFF57C00),
+                secondary: const Color(0xFFFFB300),
+                surface: Colors.white,
+              ),
+              dialogTheme: DialogThemeData(
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+              cardTheme: CardThemeData(
+                color: Colors.white,
+                elevation: 2,
+                shadowColor: Colors.black12,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              ),
+              chipTheme: ChipThemeData(
+                backgroundColor: Colors.orange.shade50,
+                selectedColor: const Color(0xFFF57C00),
+                labelStyle: const TextStyle(color: Colors.black87),
+                secondaryLabelStyle: const TextStyle(color: Colors.white),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.transparent,
+                centerTitle: true,
+                foregroundColor: Colors.black87,
+                titleTextStyle: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold),
+                elevation: 0,
+                shadowColor: Colors.black12,
+              ),
+              elevatedButtonTheme: ElevatedButtonThemeData(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF57C00),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              navigationBarTheme: NavigationBarThemeData(
+                backgroundColor: Colors.white,
+                indicatorColor: const Color(0xFFF57C00).withOpacity(0.15),
+                iconTheme: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return const IconThemeData(color: Color(0xFFF57C00));
+                  }
+                  return const IconThemeData(color: Colors.black45);
+                }),
+                labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return const TextStyle(color: Color(0xFFF57C00), fontWeight: FontWeight.bold);
+                  }
+                  return const TextStyle(color: Colors.black45);
+                }),
+              ),
+            ),
+            builder: (context, child) {
+              return GlobalInviteListener(child: child!);
+            },
+            onGenerateRoute: (settings) {
+              if (settings.name == '/chat_detail') {
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (context) => ChatDetailScreen(
+                    chatId: args['chatId'],
+                    otherUserName: args['otherUserName'],
+                    otherUserId: args['otherUserId'],
+                  ),
+                );
+              } else if (settings.name == '/tien_len_room') {
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (context) => TienLenRoomScreen(roomId: args['roomId']),
+                );
+              }
+              return null;
+            },
+            home: BlocBuilder<AuthBloc, AuthState>(
+              buildWhen: (previous, current) => previous.runtimeType != current.runtimeType,
+              builder: (context, state) {
+                if (state is AuthAuthenticated) {
+                  return const MainNavScreen();
+                }
+                if (state is AuthInitial || state is AuthLoading) {
+                  return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                }
+                return const LoginScreen();
+              },
+            ),
+          );
         },
-        home: BlocBuilder<AuthBloc, AuthState>(
-          buildWhen: (previous, current) => previous.runtimeType != current.runtimeType,
-          builder: (context, state) {
-            if (state is AuthAuthenticated) {
-              return const MainNavScreen();
-            }
-            if (state is AuthInitial || state is AuthLoading) {
-              return const Scaffold(body: Center(child: CircularProgressIndicator()));
-            }
-            return const LoginScreen();
-          },
-        ),
       ),
     );
   }
