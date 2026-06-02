@@ -138,5 +138,16 @@ class FeedService {
       await docRef.update({'reactions.$userId': reactionType}); // Thêm/Đổi cảm xúc
     }
   }
+
+  Stream<List<PostModel>> getUserPosts(String userId) {
+    return _firestore
+        .collection('posts')
+        .where('userId', isEqualTo: userId) // Lọc đúng bài của user này
+        // .orderBy('timestamp', descending: true) // Bài mới nhất lên đầu
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => PostModel.fromFirestore(doc)).toList();
+    });
+  }
 }
 
