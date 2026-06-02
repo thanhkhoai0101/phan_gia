@@ -244,6 +244,14 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
                     ? Stack(
                         alignment: Alignment.center,
                         children: [
+                          // Lớp che phía sau popup để đóng khi tap ngoài
+                          if (_showReactionPopup)
+                            Positioned.fill(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _showReactionPopup = false),
+                                child: Container(color: Colors.transparent),
+                              ),
+                            ),
                           AspectRatio(
                             aspectRatio: _videoController!.value.aspectRatio,
                             child: VideoPlayer(_videoController!),
@@ -393,14 +401,6 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
             ),
           ),
 
-        // Lớp che phía sau popup để đóng khi tap ngoài
-        if (_showReactionPopup)
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: () => setState(() => _showReactionPopup = false),
-              child: Container(color: Colors.transparent),
-            ),
-          ),
       ],
     );
   }
