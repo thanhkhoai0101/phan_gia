@@ -113,13 +113,18 @@ class _TienLenRoomViewState extends State<_TienLenRoomView> {
         return;
       }
  
+      // Bot phải nhìn ĐỐI THỦ NGUY HIỂM NHẤT (ít bài nhất) trong tất cả người
+      // chơi khác đang còn bài, không chỉ người kế tiếp — để biết lúc nào cần
+      // đè/khóa người sắp về dù họ ngồi ghế không kề bên.
       int nextOpponentCards = 13;
       final players = room.players;
-      final myIdx = players.indexOf(botUid);
-      if (myIdx != -1) {
-        final nextIdx = (myIdx + 1) % players.length;
-        nextOpponentCards = room.gameState!.playerHands[players[nextIdx]]?.length ?? 13;
+      int minOpp = 9999;
+      for (final p in players) {
+        if (p == botUid) continue;
+        final n = room.gameState!.playerHands[p]?.length ?? 0;
+        if (n > 0 && n < minOpp) minOpp = n;
       }
+      if (minOpp != 9999) nextOpponentCards = minOpp;
 
       // Đặt timeout safety — nếu 10 giây mà bot chưa đánh, tự pass
       _botTimeoutTimer?.cancel();
