@@ -8,6 +8,8 @@ class CommentModel extends Equatable {
   final String authorAvatar;
   final String content;
   final DateTime timestamp;
+  final String? parentId;
+  final Map<String, String>? reactions;
 
   const CommentModel({
     required this.id,
@@ -16,17 +18,21 @@ class CommentModel extends Equatable {
     required this.authorAvatar,
     required this.content,
     required this.timestamp,
+    required this.parentId,
+    this.reactions,
   });
 
-  factory CommentModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory CommentModel.fromFirestore(Map<String, dynamic> json, String docId) {
     return CommentModel(
-      id: doc.id,
-      userId: data['userId'] ?? '',
-      authorName: data['authorName'] ?? 'Unknown',
-      authorAvatar: data['authorAvatar'] ?? '',
-      content: data['content'] ?? '',
-      timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      id: docId,
+      userId: json['userId'] ?? '',
+      authorName: json['authorName'] ?? '',
+      authorAvatar: json['authorAvatar'] ?? '',
+      content: json['content'] ?? '',
+      timestamp: (json['timestamp'] as Timestamp).toDate(),
+      parentId: json['parentId'],
+      // Ép kiểu về Map<String, String>
+      reactions: Map<String, String>.from(json['reactions'] ?? {}),
     );
   }
 
@@ -37,9 +43,11 @@ class CommentModel extends Equatable {
       'authorAvatar': authorAvatar,
       'content': content,
       'timestamp': FieldValue.serverTimestamp(),
+      'reactions': reactions,
+      if (parentId != null) 'parentId': parentId,
     };
   }
 
   @override
-  List<Object?> get props => [id, userId, authorName, authorAvatar, content, timestamp];
+  List<Object?> get props => [id, userId, authorName, authorAvatar, content, timestamp, reactions];
 }

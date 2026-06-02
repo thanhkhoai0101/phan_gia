@@ -41,6 +41,7 @@ class AddCommentEvent extends CommentEvent {
   final String authorName;
   final String authorAvatar;
   final String content;
+  final String parentId;
 
   const AddCommentEvent({
     required this.postId,
@@ -48,8 +49,23 @@ class AddCommentEvent extends CommentEvent {
     required this.authorName,
     required this.authorAvatar,
     required this.content,
+    required this.parentId,
   });
 
   @override
-  List<Object?> get props => [postId, userId, authorName, authorAvatar, content];
+  List<Object?> get props => [postId, userId, authorName, authorAvatar, content, parentId];
+}
+
+class ReactCommentEvent extends CommentEvent {
+  final String postId;
+  final String commentId;
+  final String userId;
+  final String? reactionType; // Nếu null nghĩa là hủy bỏ bày tỏ cảm xúc
+
+  const ReactCommentEvent({
+    required this.postId,
+    required this.commentId,
+    required this.userId,
+    this.reactionType,
+  });
 }

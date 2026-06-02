@@ -94,16 +94,19 @@ class FeedService {
 
   // --- COMMENTS ---
 
-  // Lấy danh sách bình luận
+// Lấy danh sách bình luận
   Stream<List<CommentModel>> getComments(String postId) {
     return _firestore
-        .collection(_collectionPath)
+        .collection(_collectionPath) // Thường là 'posts'
         .doc(postId)
         .collection('comments')
-        .orderBy('timestamp', descending: true)
+        .orderBy('timestamp', descending: false)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => CommentModel.fromFirestore(doc)).toList();
+      return snapshot.docs.map((doc) {
+        // SỬA Ở ĐÂY: Truyền data và id riêng biệt vào model
+        return CommentModel.fromFirestore(doc.data(), doc.id);
+      }).toList();
     });
   }
 
@@ -123,6 +126,16 @@ class FeedService {
     } catch (e) {
       print('Error adding comment: $e');
       throw Exception('Could not add comment');
+    }
+  }
+
+
+  Future<void> reactComment({required String postId, required String commentId, required String userId, String? reactionType}) async {
+    final docRef = _firestore.collection('posts').doc(postId).collection('comments').doc(commentId);
+    if (reactionType == null) {
+      await docRef.update({'reactions.$userId': FieldValue.delete()}); // Hủy cảm xúc
+    } else {
+      await docRef.update({'reactions.$userId': reactionType}); // Thêm/Đổi cảm xúc
     }
   }
 }

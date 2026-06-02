@@ -17,6 +17,8 @@ class CommentBloc extends Bloc<CommentEvent, CommentState> {
     on<CommentsUpdated>(_onCommentsUpdated);
     on<CommentsErrorEvent>(_onCommentsError);
     on<AddCommentEvent>(_onAddComment);
+    // Đăng ký event trong Constructor:
+    on<ReactCommentEvent>(_onReactComment);
   }
 
   void _onLoadComments(LoadComments event, Emitter<CommentState> emit) {
@@ -64,6 +66,7 @@ class CommentBloc extends Bloc<CommentEvent, CommentState> {
         authorAvatar: event.authorAvatar,
         content: event.content,
         timestamp: DateTime.now(),
+        parentId: event.parentId,
       );
 
       await _feedService.addComment(event.postId, comment);
@@ -75,6 +78,18 @@ class CommentBloc extends Bloc<CommentEvent, CommentState> {
     }
   }
 
+  Future<void> _onReactComment(ReactCommentEvent event, Emitter<CommentState> emit) async {
+    try {
+      await _feedService.reactComment(
+        postId: event.postId,
+        commentId: event.commentId,
+        userId: event.userId,
+        reactionType: event.reactionType,
+      );
+    } catch (e) {
+      emit(CommentError('Lỗi tương tác bình luận: $e'));
+    }
+  }
   @override
   Future<void> close() {
     _commentsSubscription?.cancel();
