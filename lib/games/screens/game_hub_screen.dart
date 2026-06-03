@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:phan_family/features/games/screens/tien_len/tien_len_lobby_screen.dart';
+import 'package:phan_family/games/blocs/caro/caro_bloc.dart';
+import 'package:phan_family/games/screens/tien_len/tien_len_lobby_screen.dart';
+import 'package:phan_family/games/services/caro_service.dart';
 
-import '../../../blocs/auth/auth_bloc.dart';
-import '../../../blocs/auth/auth_event.dart';
 import 'bau_cua/bau_cua_lobby_screen.dart';
+import 'caro/caro_home_screen.dart';
 
 class GameHubScreen extends StatelessWidget {
   const GameHubScreen({Key? key}) : super(key: key);
@@ -12,15 +13,16 @@ class GameHubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Giải trí Gia đình'),
-      ),
+      appBar: AppBar(title: const Text('Giải trí Gia đình')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Tất cả trò chơi', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              'Tất cả trò chơi',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 20),
             GridView.count(
               crossAxisCount: 2,
@@ -35,7 +37,12 @@ class GameHubScreen extends StatelessWidget {
                   icon: Icons.casino,
                   color: Colors.green,
                   onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const TienLenLobbyScreen()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const TienLenLobbyScreen(),
+                      ),
+                    );
                   },
                 ),
                 _buildGameCard(
@@ -44,18 +51,43 @@ class GameHubScreen extends StatelessWidget {
                   icon: Icons.catching_pokemon, // Placeholder
                   color: Colors.orange,
                   onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const BauCuaLobbyScreen()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const BauCuaLobbyScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildGameCard(
+                  context,
+                  title: 'Cờ Caro',
+                  icon: Icons.grid_on_rounded,
+                  color: Colors.lightBlue,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CaroHomeScreen()
+                      ),
+                    );
                   },
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildGameCard(BuildContext context, {required String title, required IconData icon, required Color color, required VoidCallback onTap}) {
+  Widget _buildGameCard(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
@@ -70,7 +102,14 @@ class GameHubScreen extends StatelessWidget {
           children: [
             Icon(icon, size: 60, color: color),
             const SizedBox(height: 10),
-            Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
           ],
         ),
       ),

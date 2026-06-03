@@ -13,7 +13,7 @@ import 'blocs/feed/feed_bloc.dart';
 import 'services/feed_service.dart';
 import 'features/auth/login_screen.dart';
 import 'features/chat/chat_detail_screen.dart';
-import 'features/games/screens/tien_len/tien_len_room_screen.dart';
+import 'games/screens/tien_len/tien_len_room_screen.dart';
 import 'features/main_nav/main_nav_screen.dart';
 import 'services/notification_service.dart';
 import 'models/user_model.dart';

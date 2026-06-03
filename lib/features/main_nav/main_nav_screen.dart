@@ -2,16 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_event.dart';
+import '../../games/screens/game_hub_screen.dart';
 import '../chat/chat_list_screen.dart';
 import '../contacts/contacts_screen.dart';
-import '../games/screens/game_hub_screen.dart';
 import '../profile/profile_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../blocs/auth/auth_state.dart';
 import '../settings/settings_screen.dart';
 import '../feed/feed_screen.dart';
-import '../../blocs/feed/feed_bloc.dart';
 
 class MainNavScreen extends StatefulWidget {
   const MainNavScreen({Key? key}) : super(key: key);

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:phan_family/features/games/base/base_format.dart';
-import 'package:phan_family/features/games/screens/tien_len/tien_len_room_screen.dart';
+import 'package:phan_family/games/base/base_format.dart';
+import 'package:phan_family/games/screens/tien_len/tien_len_room_screen.dart';
 
 import '../../../../blocs/auth/auth_bloc.dart';
 import '../../../../blocs/auth/auth_state.dart';
@@ -600,9 +600,9 @@ class _TienLenLobbyScreenState extends State<TienLenLobbyScreen> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text('DANH SÁCH BÀN: $_selectedFilter', 
+                                    Expanded(child: Text('DANH SÁCH BÀN: $_selectedFilter',
                                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amberAccent, letterSpacing: 1.2),
-                                    ),
+                                    ),),
                                     IconButton(
                                       icon: const Icon(Icons.refresh, color: Colors.white70),
                                       onPressed: () => setState(() {}),
@@ -678,7 +678,6 @@ class _TienLenLobbyScreenState extends State<TienLenLobbyScreen> {
                   boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)],
                 ),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     _buildUserInfoBadge(user),
                     Container(width: 1, height: 20, color: Colors.white10, margin: const EdgeInsets.symmetric(horizontal: 8)),
