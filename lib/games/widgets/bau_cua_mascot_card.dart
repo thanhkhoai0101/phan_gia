@@ -38,68 +38,68 @@ class BauCuaMascotCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: canBet ? onTap : null,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(15),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(15),
           border: Border.all(
             color: myBet > 0 ? Colors.amberAccent : Colors.white10,
             width: myBet > 0 ? 2 : 1,
           ),
           boxShadow: myBet > 0
-              ? [BoxShadow(color: Colors.amberAccent.withOpacity(0.1), blurRadius: 15, spreadRadius: 2)]
+              ? [BoxShadow(color: Colors.amberAccent.withOpacity(0.2), blurRadius: 10, spreadRadius: 1)]
               : [],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            Flexible(
-              flex: 3,
-              child: _buildMascotImage(index),
+            // Image Background
+            ClipRRect(
+              borderRadius: BorderRadius.circular(13),
+              child: _buildMascotImageBackground(index),
             ),
-            const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  letterSpacing: 1.2,
+            
+            // Gradient Overlay for Text Readability
+            if (totalBet > 0 || myBet > 0)
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(13),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.8),
+                    ],
+                    stops: const [0.4, 1.0],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Flexible(
-              flex: 2,
-              child: _buildBetInfo(totalBet, myBet),
-            ),
+
+            // Bet Info Overlay
+            if (totalBet > 0 || myBet > 0)
+              Positioned(
+                bottom: 4,
+                left: 2,
+                right: 2,
+                child: _buildBetInfo(totalBet, myBet),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMascotImage(int index) {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.white10,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.asset(
-          _getAssetPath(index),
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) => Center(
-            child: Icon(_getMascotIcon(index), color: mascotColor, size: 30),
-          ),
+  Widget _buildMascotImageBackground(int index) {
+    return Image.asset(
+      _getAssetPath(index),
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => Container(
+        color: mascotColor.withOpacity(0.2),
+        child: Center(
+          child: Icon(_getMascotIcon(index), color: mascotColor, size: 40),
         ),
       ),
     );
@@ -120,47 +120,47 @@ class BauCuaMascotCard extends StatelessWidget {
   Widget _buildBetInfo(int total, int mine) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: Colors.black54,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.monetization_on, color: Colors.amber, size: 10),
-              const SizedBox(width: 4),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    total.toString(),
-                    style: const TextStyle(
-                      color: Colors.amberAccent,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
+        if (total > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber.withOpacity(0.5), width: 0.5),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.monetization_on, color: Colors.amber, size: 10),
+                const SizedBox(width: 4),
+                Text(
+                  total.toString(),
+                  style: const TextStyle(
+                    color: Colors.amberAccent,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         if (mine > 0)
           Padding(
             padding: const EdgeInsets.only(top: 2),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Text(
                 'Bạn: $mine',
                 style: const TextStyle(
-                  color: Colors.greenAccent,
-                  fontSize: 11,
+                  color: Colors.white,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  shadows: [Shadow(color: Colors.black, blurRadius: 4)],
                 ),
               ),
             ),

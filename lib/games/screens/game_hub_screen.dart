@@ -6,6 +6,7 @@ import 'package:phan_family/games/services/caro_service.dart';
 
 import 'bau_cua/bau_cua_lobby_screen.dart';
 import 'caro/caro_home_screen.dart';
+import 'ban_ga/ban_ga_screen.dart';
 
 class GameHubScreen extends StatelessWidget {
   const GameHubScreen({Key? key}) : super(key: key);
@@ -69,6 +70,20 @@ class GameHubScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const CaroHomeScreen()
+                      ),
+                    );
+                  },
+                ),
+                _buildGameCard(
+                  context,
+                  title: 'Bắn Gà',
+                  icon: Icons.flight,
+                  color: Colors.deepPurple,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const BanGaScreen()
                       ),
                     );
                   },

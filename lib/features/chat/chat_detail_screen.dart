@@ -11,6 +11,7 @@ import 'package:zego_uikit/zego_uikit.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 
 import 'components/attachment_sheet.dart';
 import 'components/background_selector_sheet.dart';
@@ -267,7 +268,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         //     Text(widget.otherUserName),
         //   ],
         // ),
-        title: Text(widget.otherUserName),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        title: Text(widget.otherUserName, style: TextStyle(color: Colors.white),),
         centerTitle: false,
         actions: [
           _buildCallButton(isVideo: false),
@@ -281,16 +284,31 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 .snapshots(),
             builder: (context, snapshot) {
               String? currentBackground;
+              String? currentBubbleStyle;
               if (snapshot.hasData && snapshot.data!.exists) {
-                currentBackground =
-                    (snapshot.data!.data()
-                        as Map<String, dynamic>)['backgroundImage'];
+                final data = snapshot.data!.data() as Map<String, dynamic>;
+                currentBackground = data['backgroundImage'];
+                currentBubbleStyle = data['bubbleStyle'];
               }
-              return IconButton(
-                icon: const Icon(Icons.wallpaper),
-                onPressed: () {
-                  _showBackgroundSelector(currentBackground);
+              return PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (value) {
+                  if (value == 'bg') {
+                    _showBackgroundSelector(currentBackground);
+                  } else if (value == 'bubble') {
+                    _showBubbleStyleSelector(currentBubbleStyle);
+                  }
                 },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'bg',
+                    child: Text('Sửa ảnh chung'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'bubble',
+                    child: Text('Thay đổi kiểu bubble chat'),
+                  ),
+                ],
               );
             },
           ),
@@ -303,9 +321,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             .snapshots(),
         builder: (context, chatSnapshot) {
           String? bgImage;
+          String? bubbleStyle;
           if (chatSnapshot.hasData && chatSnapshot.data!.exists) {
             final data = chatSnapshot.data!.data() as Map<String, dynamic>;
             bgImage = data['backgroundImage'];
+            bubbleStyle = data['bubbleStyle'];
           }
 
           BoxDecoration? bgDecoration;
@@ -348,7 +368,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         itemBuilder: (context, index) {
                           final message = messages[index];
                           final isMe = message.senderId == currentUserId;
-                          return _buildMessageBubble(message, isMe);
+                          return _buildMessageBubble(message, isMe, bubbleStyle);
                         },
                       );
                     },
@@ -383,6 +403,40 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
+  void _showBubbleStyleSelector(String? currentStyle) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF162435),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('Mặc định', style: TextStyle(color: Colors.white)),
+              trailing: (currentStyle == null || currentStyle == 'default') 
+                  ? const Icon(Icons.check, color: Colors.blueAccent) 
+                  : null,
+              onTap: () {
+                _chatService.updateChatTheme(widget.chatId, bubbleStyle: 'default');
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('Valentine', style: TextStyle(color: Colors.white)),
+              trailing: currentStyle == 'valentine' 
+                  ? const Icon(Icons.check, color: Colors.blueAccent) 
+                  : null,
+              onTap: () {
+                _chatService.updateChatTheme(widget.chatId, bubbleStyle: 'valentine');
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Color _getPresetColor(String presetId) {
     switch (presetId) {
       case 'color_pink':
@@ -400,7 +454,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
   }
 
-  Widget _buildMessageBubble(MessageModel message, bool isMe) {
+  Widget _buildMessageBubble(MessageModel message, bool isMe, String? bubbleStyle) {
     Widget contentWidget;
     bool isMedia = false;
 
@@ -432,71 +486,75 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         break;
     }
 
-    final bubble = ValentineBubble(
-      isMe: isMe,
-      contentWidget: contentWidget,
-      isMedia: isMedia,
-      message: message,
-    );
+    if (bubbleStyle == 'valentine') {
+      final bubble = ValentineBubble(
+        isMe: isMe,
+        contentWidget: contentWidget,
+        isMedia: isMedia,
+        message: message,
+      );
 
-    if (isMe) return bubble;
+      if (isMe) return bubble;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 10, bottom: 26),
-          child: CircleAvatar(
-            radius: 14,
-            backgroundColor: Colors.grey[800],
-            backgroundImage: widget.otherUserAvatar != null && widget.otherUserAvatar!.isNotEmpty
-                ? CachedNetworkImageProvider(widget.otherUserAvatar!)
-                : const AssetImage('assets/images/logo.png') as ImageProvider,
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 10, bottom: 26),
+            child: CircleAvatar(
+              radius: 14,
+              backgroundColor: Colors.grey[800],
+              backgroundImage: widget.otherUserAvatar != null && widget.otherUserAvatar!.isNotEmpty
+                  ? CachedNetworkImageProvider(widget.otherUserAvatar!)
+                  : const AssetImage('assets/images/logo.png') as ImageProvider,
+            ),
           ),
+          Expanded(child: bubble),
+        ],
+      );
+    }
+
+    // Default Bubble
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: isMedia
+            ? (message.type == MessageType.audio ? EdgeInsets.zero : const EdgeInsets.all(2))
+            : const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+        decoration: isMedia && message.type != MessageType.audio
+            ? null
+            : BoxDecoration(
+                color: isMe ? Colors.blueAccent : Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(16),
+                  topRight: const Radius.circular(16),
+                  bottomLeft: Radius.circular(isMe ? 16 : 4),
+                  bottomRight: Radius.circular(isMe ? 4 : 16),
+                ),
+              ),
+        child: Column(
+          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            contentWidget,
+            const SizedBox(height: 4),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isMedia && message.type != MessageType.audio ? 8.0 : 0.0,
+              ),
+              child: Text(
+                DateFormat('HH:mm').format(message.timestamp),
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.white70,
+                ),
+              ),
+            ),
+          ],
         ),
-        Expanded(child: bubble),
-      ],
+      ),
     );
-    //   Align(
-    //   alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-    //   child: Container(
-    //     margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-    //     padding: isMedia
-    //         ? (message.type == MessageType.audio ? EdgeInsets.zero : const EdgeInsets.all(2))
-    //         : const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-    //     constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
-    //     decoration: isMedia && message.type != MessageType.audio
-    //         ? null
-    //         : BoxDecoration(
-    //             color: isMe ? Colors.blueAccent : Colors.black.withOpacity(0.5),
-    //             borderRadius: BorderRadius.only(
-    //               topLeft: const Radius.circular(16),
-    //               topRight: const Radius.circular(16),
-    //               bottomLeft: Radius.circular(isMe ? 16 : 4),
-    //               bottomRight: Radius.circular(isMe ? 4 : 16),
-    //             ),
-    //           ),
-    //     child: Column(
-    //       crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-    //       children: [
-    //         contentWidget,
-    //         const SizedBox(height: 4),
-    //         Padding(
-    //           padding: EdgeInsets.symmetric(
-    //             horizontal: isMedia && message.type != MessageType.audio ? 8.0 : 0.0,
-    //           ),
-    //           child: Text(
-    //             DateFormat('HH:mm').format(message.timestamp),
-    //             style: const TextStyle(
-    //               fontSize: 10,
-    //               color: Colors.white70,
-    //             ),
-    //           ),
-    //         ),
-    //       ],
-    //     ),
-    //   ),
-    // );
   }
 
   Widget _buildMessageInput(bool hasBackground) {
@@ -518,9 +576,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 children: [
                   // Attachment + Button
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.add_circle_outline_rounded,
-                      color: Colors.blueAccent,
+                      color: Theme.of(context).primaryColor,
                       size: 28,
                     ),
                     onPressed: _showAttachmentSheet,
@@ -548,7 +606,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   // Dynamic Send / Mic Icon
                   CircleAvatar(
                     radius: 20,
-                    backgroundColor: Colors.blueAccent,
+                    backgroundColor: Theme.of(context).primaryColor,
                     child: _showSendButton
                         ? IconButton(
                             icon: const Icon(

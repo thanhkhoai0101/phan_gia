@@ -28,7 +28,7 @@ class BauCuaBloc extends Bloc<BauCuaEvent, BauCuaState> {
   }
 
   void _onUpdateRoomData(UpdateRoomData event, Emitter<BauCuaState> emit) {
-    emit(state.copyWith(room: event.room, isLoading: false));
+    emit(state.copyWith(room: event.room, isLoading: false, clearError: true));
     
     // Auto-advance state if we are host
     if (event.room.hostUid == _service.currentUser?.uid) {
@@ -37,27 +37,48 @@ class BauCuaBloc extends Bloc<BauCuaEvent, BauCuaState> {
   }
 
   void _handleHostLogic(BauCuaRoom room) {
-    if (room.status == 'betting' && room.timerSeconds > 0) {
-      if (_gameTimer == null || !_gameTimer!.isActive) {
-        _startTimer(room.id, room.timerSeconds);
+    if (room.status == 'waiting') {
+      if (room.isAuto) {
+        if (_gameTimer == null || !_gameTimer!.isActive) {
+          _service.updateRoomStatus(room.id, 'preparing', timer: 5);
+        }
       }
-    } else if (room.status == 'betting' && room.timerSeconds == 0) {
+    } else if (room.status == 'preparing' && room.timerSeconds > 0) {
+      if (_gameTimer == null || !_gameTimer!.isActive) {
+        _startTimer(room.id, room.timerSeconds, 'preparing');
+      }
+    } else if (room.status == 'preparing' && room.timerSeconds <= 0) {
+      _service.updateRoomStatus(room.id, 'betting', timer: 30);
+    } else if (room.status == 'betting' && room.timerSeconds > 0) {
+      if (_gameTimer == null || !_gameTimer!.isActive) {
+        _startTimer(room.id, room.timerSeconds, 'betting');
+      }
+    } else if (room.status == 'betting' && room.timerSeconds <= 0) {
       _rollDice(room.id);
-    } else if (room.status == 'result' && room.timerSeconds == 0) {
+    } else if (room.status == 'result' && room.timerSeconds > 0) {
+      if (_gameTimer == null || !_gameTimer!.isActive) {
+        _startTimer(room.id, room.timerSeconds, 'result');
+      }
+    } else if (room.status == 'result' && room.timerSeconds <= 0) {
       // Ready for next round
-      _service.updateRoomStatus(room.id, 'waiting');
+      if (room.isAuto) {
+        _service.updateRoomStatus(room.id, 'preparing', timer: 5);
+      } else {
+        _service.updateRoomStatus(room.id, 'waiting');
+      }
     }
   }
 
-  void _startTimer(String roomId, int initialSeconds) {
+  void _startTimer(String roomId, int initialSeconds, String statusName) {
     _gameTimer?.cancel();
     int current = initialSeconds;
     _gameTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       current--;
-      if (current < 0) {
+      if (current <= 0) {
         timer.cancel();
-      } else {
-        _service.updateRoomStatus(roomId, 'betting', timer: current);
+      }
+      if (current >= 0) {
+        _service.updateRoomStatus(roomId, statusName, timer: current);
       }
     });
   }
@@ -86,6 +107,7 @@ class BauCuaBloc extends Bloc<BauCuaEvent, BauCuaState> {
       await _service.placeBet(state.room!.id, event.mascotIndex, event.amount, event.userName);
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
+      emit(state.copyWith(clearError: true));
     }
   }
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
+import 'package:phan_family/config/cloudinary_config.dart';
 import 'dart:convert';
 import '../models/post_model.dart';
 import '../models/comment_model.dart';
@@ -31,8 +32,8 @@ class FeedService {
       final resourceType = isVideo ? 'video' : 'image';
       
       // TODO: ĐIỀN THÔNG TIN CLOUDINARY CỦA BẠN VÀO ĐÂY
-      final String cloudName = 'dogxxj74b';
-      final String uploadPreset = 'ml_default';
+      final String cloudName = CloudinaryConfig.cloudName;
+      final String uploadPreset = CloudinaryConfig.uploadPreset;
       final uri = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/$resourceType/upload');
       
       final request = http.MultipartRequest('POST', uri)

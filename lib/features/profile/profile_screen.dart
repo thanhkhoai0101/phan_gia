@@ -1,6 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,12 +8,13 @@ import '../../blocs/auth/auth_state.dart';
 import '../../models/user_model.dart';
 import '../../models/post_model.dart';
 import '../../services/feed_service.dart';
+import '../../services/cloudinary_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../feed/widgets/post_card.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -23,7 +22,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final ImagePicker _picker = ImagePicker();
-  final FeedService _feedService = FeedService(); // <─── Khởi tạo service
+  final FeedService _feedService = FeedService();
+  final CloudinaryService _cloudinary = CloudinaryService();
   bool _isLoading = false;
 
   // Trạng thái bộ lọc: 'all' (Tất cả), 'photos' (Ảnh), 'status' (Trạng thái)
@@ -36,33 +36,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() { _isLoading = true; });
 
     try {
-      final File file = File(image.path);
-      final String cloudName = 'dogxxj74b';
-      final String uploadPreset = 'ml_default';
-      final url = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
+      // Lấy URL ảnh cũ để xoá sau khi upload thành công
+      final String? oldUrl = isAvatar ? user.avatarUrl : user.coverUrl;
 
-      var request = http.MultipartRequest('POST', url)
-        ..fields['upload_preset'] = uploadPreset
-        ..files.add(await http.MultipartFile.fromPath('file', file.path));
+      // Upload ảnh mới lên Cloudinary
+      final String? downloadUrl = await _cloudinary.uploadImage(File(image.path));
+      if (downloadUrl == null) throw Exception('Không thể tải ảnh lên Cloudinary');
 
-      var response = await request.send();
-
-      if (response.statusCode == 200) {
-        var responseData = await response.stream.bytesToString();
-        var jsonResponse = json.decode(responseData);
-        final String downloadUrl = jsonResponse['secure_url'];
-
-        if (!context.mounted) return;
-        context.read<AuthBloc>().add(
-          UpdateProfileRequested(
-            avatarUrl: isAvatar ? downloadUrl : null,
-            coverUrl: !isAvatar ? downloadUrl : null,
-          ),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cập nhật ảnh thành công!')));
-      } else {
-        throw Exception('Không thể tải file lên Cloudinary');
+      // Xoá ảnh cũ (không block UI, chạy ngầm)
+      if (oldUrl != null && oldUrl.isNotEmpty) {
+        _cloudinary.deleteByUrl(oldUrl); // fire & forget
       }
+
+      if (!context.mounted) return;
+      context.read<AuthBloc>().add(
+        UpdateProfileRequested(
+          avatarUrl: isAvatar ? downloadUrl : null,
+          coverUrl: !isAvatar ? downloadUrl : null,
+        ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cập nhật ảnh thành công!')),
+      );
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
@@ -296,7 +291,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 if (_isLoading)
                   Container(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                     child: const Center(child: CircularProgressIndicator()),
                   ),
               ],

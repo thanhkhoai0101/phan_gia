@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:phan_family/config/cloudinary_config.dart';
 import 'package:phan_family/models/chat_model.dart';
 import '../models/message_model.dart';
 import 'notification_service.dart';
@@ -45,8 +46,8 @@ class ChatService {
         throw Exception('File không tồn tại: ${file.path}');
       }
 
-      final String cloudName = 'dogxxj74b';
-      final String uploadPreset = 'ml_default';
+      final String cloudName = CloudinaryConfig.cloudName;
+      final String uploadPreset = CloudinaryConfig.uploadPreset;
       
       // Cloudinary gộp chung video và audio vào resource_type là 'video'
       String resourceType = mediaType == 'image' ? 'image' : 'video';
@@ -197,9 +198,10 @@ class ChatService {
   }
 
   // Update chat theme
-  Future<void> updateChatTheme(String chatId, {String? backgroundImage}) async {
+  Future<void> updateChatTheme(String chatId, {String? backgroundImage, String? bubbleStyle}) async {
     final Map<String, dynamic> updates = {};
     if (backgroundImage != null) updates['backgroundImage'] = backgroundImage;
+    if (bubbleStyle != null) updates['bubbleStyle'] = bubbleStyle;
     
     if (updates.isNotEmpty) {
       await _firestore.collection('chats').doc(chatId).update(updates);

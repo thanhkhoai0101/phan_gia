@@ -12,6 +12,7 @@ class RoomModel {
   final GameStateModel? gameState;
 
   final Map<String, int> botBalances; // botUid -> balance
+  final String roomType; // 'tien_len', 'caro', etc.
 
   RoomModel({
     required this.id,
@@ -24,6 +25,7 @@ class RoomModel {
     required this.status,
     required this.createdAt,
     this.gameState,
+    this.roomType = 'tien_len',
   });
 
   factory RoomModel.fromMap(Map<String, dynamic> map, String documentId) {
@@ -38,6 +40,7 @@ class RoomModel {
       status: map['status'] ?? 'waiting',
       createdAt: map['createdAt'] ?? 0,
       gameState: map['gameState'] != null ? GameStateModel.fromMap(map['gameState']) : null,
+      roomType: map['roomType'] ?? 'tien_len',
     );
   }
 
@@ -52,6 +55,7 @@ class RoomModel {
       'status': status,
       'createdAt': createdAt,
       'gameState': gameState?.toMap(),
+      'roomType': roomType,
     };
   }
 }

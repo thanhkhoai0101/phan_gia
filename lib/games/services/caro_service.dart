@@ -37,7 +37,10 @@ class CaroService {
     final roomData = roomDoc.data() as Map<String, dynamic>?;
     if (roomData == null) return null;
 
-    // Chỉ trả về nếu ván chưa kết thúc
+    // Only return if this is a Caro room
+    if (roomData['roomType'] != 'caro') return null;
+
+    // Only return if game is not finished
     if (roomData['winner'] != 0) return null;
 
     return CaroModel.fromJson(roomData);
@@ -79,6 +82,7 @@ class CaroService {
         .doc(roomId)
         .set({
       "roomId": roomId,
+      "roomType": "caro", // Tag this as a Caro room
       "hostId": hostId,
       "hostName": hostName,
       "guestId": "",

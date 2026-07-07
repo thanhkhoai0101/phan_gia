@@ -32,6 +32,7 @@ class RoomService {
       );
       Map<String, dynamic> data = newRoom.toMap();
       data['isFirstGame'] = true;
+      data['roomType'] = 'tien_len'; // Explicitly tag as Tiến Lên room
       await _firestore.collection('rooms').doc(roomId).set(data);
       return roomId;
     } catch (e) { return null; }
@@ -561,6 +562,7 @@ class RoomService {
 
   Stream<List<RoomModel>> streamWaitingRooms() {
     return _firestore.collection('rooms')
+        .where('roomType', isEqualTo: 'tien_len')
         .where('status', whereIn: ['waiting', 'playing'])
         .limit(20)
         .snapshots()

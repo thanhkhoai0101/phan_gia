@@ -12,6 +12,7 @@ class BauCuaRoom {
   final List<BauCuaBet> currentBets;
   final int timerSeconds;
   final List<List<int>> history;
+  final bool isAuto;
 
   BauCuaRoom({
     required this.id,
@@ -25,6 +26,7 @@ class BauCuaRoom {
     required this.currentBets,
     required this.timerSeconds,
     this.history = const [],
+    this.isAuto = false,
   });
 
   factory BauCuaRoom.fromFirestore(DocumentSnapshot doc) {
@@ -57,6 +59,7 @@ class BauCuaRoom {
           .toList(),
       timerSeconds: data['timerSeconds'] ?? 0,
       history: parsedHistory,
+      isAuto: data['isAuto'] ?? false,
     );
   }
 
@@ -72,6 +75,7 @@ class BauCuaRoom {
       'currentBets': currentBets.map((b) => b.toMap()).toList(),
       'timerSeconds': timerSeconds,
       'history': history.map((h) => h.join(',')).toList(),
+      'isAuto': isAuto,
     };
   }
 }
@@ -109,12 +113,14 @@ class BauCuaPlayer {
 }
 
 class BauCuaBet {
+  final String id;
   final String userId;
   final String userName;
   final int mascotIndex; // 0: Nai, 1: Bầu, 2: Gà, 3: Tôm, 4: Cua, 5: Cá
   final int amount;
 
   BauCuaBet({
+    required this.id,
     required this.userId,
     required this.userName,
     required this.mascotIndex,
@@ -123,6 +129,7 @@ class BauCuaBet {
 
   factory BauCuaBet.fromMap(Map<String, dynamic> map) {
     return BauCuaBet(
+      id: map['id'] ?? '',
       userId: map['userId'] ?? '',
       userName: map['userName'] ?? '',
       mascotIndex: map['mascotIndex'] ?? 0,
@@ -132,6 +139,7 @@ class BauCuaBet {
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'userId': userId,
       'userName': userName,
       'mascotIndex': mascotIndex,

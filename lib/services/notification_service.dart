@@ -66,15 +66,33 @@ class NotificationService {
       });
     } else if (type == 'game_invite' && roomId != null && roomId.isNotEmpty) {
       final inviteId = message.data['inviteId'];
+      final game = message.data['game'] ?? 'tien_len';
+
       if (inviteId != null && inviteId.isNotEmpty) {
         FirebaseFirestore.instance.collection('invites').doc(inviteId).update({'status': 'accepted'});
       }
       
-      Future.delayed(const Duration(milliseconds: 1000), () {
-        navigatorKey.currentState?.pushNamed(
-          '/tien_len_room',
-          arguments: {'roomId': roomId}
-        );
+      Future.delayed(const Duration(milliseconds: 1000), () async {
+        if (game == 'caro') {
+          // Lấy user hiện tại
+          final uid = FirebaseFirestore.instance.app.options.projectId; // Không an toàn lắm, nhưng NotificationService không có AuthBloc
+          // Đợi đã, để lấy currentUserUid, có thể lấy từ AuthService.
+          // Nhưng route '/caro_room' cần currentUserUid.
+          // Cách an toàn là lấy từ auth Firebase
+          // Tuy nhiên, mình có thể truyền empty rồi xử lý sau, hoặc bỏ qua vì GlobalInviteListener (Overlay) đã xử lý tốt.
+          // Thật ra, khi click push, user sẽ vào app. Khi vào app, GlobalInviteListener sẽ kích hoạt nếu invite còn pending.
+          // Nhưng nếu click từ push, ta vẫn cần đẩy route.
+          // Để đơn giản, ta chỉ cần truyền roomId, và sửa route `/caro_room` trong main.dart để nó lấy UID từ AuthBloc nếu không có argument.
+          navigatorKey.currentState?.pushNamed(
+            '/caro_room',
+            arguments: {'roomId': roomId} // Không truyền uid, lát sửa main.dart
+          );
+        } else {
+          navigatorKey.currentState?.pushNamed(
+            '/tien_len_room',
+            arguments: {'roomId': roomId}
+          );
+        }
       });
     }
   }
@@ -125,7 +143,7 @@ class NotificationService {
     String receiverToken, 
     String title, 
     String body, 
-    {String? chatId, String? otherUserId, String? otherUserName, String? roomId, String? inviteId, String type = 'chat'}
+    {String? chatId, String? otherUserId, String? otherUserName, String? roomId, String? inviteId, String type = 'chat', String? game}
   ) async {
     try {
       final accessToken = await _getAccessToken();
@@ -163,6 +181,7 @@ class NotificationService {
           },
           "data": {
             "type": type,
+            "game": game ?? "tien_len",
             "title": title,
             "body": body,
             "chatId": chatId ?? "",

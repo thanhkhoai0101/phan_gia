@@ -6,6 +6,7 @@ class UserModel {
   final String lastLogin;
   final String? avatarUrl;
   final String? coverUrl;
+  final String? dateOfBirth;
 
   UserModel({
     required this.uid,
@@ -15,6 +16,7 @@ class UserModel {
     required this.lastLogin,
     this.avatarUrl,
     this.coverUrl,
+    this.dateOfBirth,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map, String documentId) {
@@ -26,6 +28,7 @@ class UserModel {
       lastLogin: map['lastLogin'] ?? '',
       avatarUrl: map['avatarUrl'],
       coverUrl: map['coverUrl'],
+      dateOfBirth: map['dateOfBirth'],
     );
   }
 
@@ -37,6 +40,7 @@ class UserModel {
       'lastLogin': lastLogin,
       'avatarUrl': avatarUrl,
       'coverUrl': coverUrl,
+      'dateOfBirth': dateOfBirth,
     };
   }
 }

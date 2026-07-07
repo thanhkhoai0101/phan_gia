@@ -52,10 +52,11 @@ class _BauCuaLobbyScreenState extends State<BauCuaLobbyScreen> {
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
                       ),
-                      itemCount: rooms.length + 1,
+                      itemCount: rooms.length + 2, // 2 create buttons
                       itemBuilder: (context, index) {
-                        if (index == 0) return _buildCreateRoomButton(context, user.displayName);
-                        return _buildRoomCard(context, rooms[index - 1], user.displayName, user.balance);
+                        if (index == 0) return _buildCreateRoomButton(context, user.displayName, isAuto: true);
+                        if (index == 1) return _buildCreateRoomButton(context, user.displayName, isAuto: false);
+                        return _buildRoomCard(context, rooms[index - 2], user.displayName, user.balance);
                       },
                     );
                   },
@@ -95,24 +96,27 @@ class _BauCuaLobbyScreenState extends State<BauCuaLobbyScreen> {
     );
   }
 
-  Widget _buildCreateRoomButton(BuildContext context, String name) {
+  Widget _buildCreateRoomButton(BuildContext context, String name, {required bool isAuto}) {
     return InkWell(
       onTap: () async {
-        String roomId = await _service.createRoom(name, 1000);
+        String roomId = await _service.createRoom(name, 1000, isAuto: isAuto);
         Navigator.push(context, MaterialPageRoute(builder: (_) => BauCuaRoomScreen(roomId: roomId)));
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: isAuto ? Colors.amber.withOpacity(0.1) : Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white24, width: 2, style: BorderStyle.solid),
+          border: Border.all(color: isAuto ? Colors.amber : Colors.white24, width: 2, style: BorderStyle.solid),
         ),
-        child: const Column(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_circle_outline, color: Colors.white30, size: 48),
-            SizedBox(height: 8),
-            Text('Tạo Bàn Mới', style: TextStyle(color: Colors.white54, fontWeight: FontWeight.bold)),
+            Icon(isAuto ? Icons.auto_mode : Icons.add_circle_outline, color: isAuto ? Colors.amber : Colors.white30, size: 48),
+            const SizedBox(height: 8),
+            Text(isAuto ? 'Tạo Bàn (Tự Động)' : 'Tạo Bàn (Thủ Công)', 
+              style: TextStyle(color: isAuto ? Colors.amber : Colors.white54, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

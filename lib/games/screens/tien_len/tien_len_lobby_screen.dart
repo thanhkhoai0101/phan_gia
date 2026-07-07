@@ -98,7 +98,11 @@ class _TienLenLobbyScreenState extends State<TienLenLobbyScreen> {
                 // Content
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance.collection('rooms').where('status', isEqualTo: 'playing').snapshots(),
+                    stream: FirebaseFirestore.instance
+                        .collection('rooms')
+                        .where('roomType', isEqualTo: 'tien_len')
+                        .where('status', isEqualTo: 'playing')
+                        .snapshots(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator(color: Colors.amberAccent));
@@ -730,7 +734,11 @@ class _TienLenLobbyScreenState extends State<TienLenLobbyScreen> {
 
   Widget _buildActivePlayersButton(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('rooms').where('status', isEqualTo: 'playing').snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('rooms')
+          .where('roomType', isEqualTo: 'tien_len')
+          .where('status', isEqualTo: 'playing')
+          .snapshots(),
       builder: (context, snapshot) {
         int activeCount = 0;
         if (snapshot.hasData) {

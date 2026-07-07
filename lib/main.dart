@@ -15,6 +15,9 @@ import 'features/auth/login_screen.dart';
 import 'features/chat/chat_detail_screen.dart';
 import 'games/screens/tien_len/tien_len_room_screen.dart';
 import 'features/main_nav/main_nav_screen.dart';
+import 'games/screens/caro/caro_screen.dart';
+import 'games/blocs/caro/caro_bloc.dart';
+import 'games/services/caro_service.dart';
 import 'services/notification_service.dart';
 import 'models/user_model.dart';
 import 'firebase_options.dart';
@@ -250,6 +253,19 @@ class MyApp extends StatelessWidget {
                 return MaterialPageRoute(
                   builder: (context) => TienLenRoomScreen(roomId: args['roomId']),
                 );
+              } else if (settings.name == '/caro_room') {
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (context) {
+                    final authState = context.read<AuthBloc>().state;
+                    final uid = args['currentUserUid'] ?? (authState is AuthAuthenticated ? authState.user.uid : '');
+                    
+                    return BlocProvider(
+                      create: (_) => CaroBloc(CaroService())..add(ListenRoomEvent(args['roomId'])),
+                      child: CaroScreen(currentUserUid: uid),
+                    );
+                  }
+                );
               }
               return null;
             },
@@ -316,6 +332,12 @@ class GlobalInviteListener extends StatelessWidget {
   }
 
   Widget _buildInviteOverlay(BuildContext context, String inviteId, Map<String, dynamic> data) {
+    final game = data['game'] ?? 'tien_len';
+    final isCaro = game == 'caro';
+    
+    final authState = context.read<AuthBloc>().state;
+    final currentUser = authState is AuthAuthenticated ? authState.user : null;
+
     return Material(
       color: Colors.black54,
       child: Center(
@@ -323,20 +345,33 @@ class GlobalInviteListener extends StatelessWidget {
           width: 300,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: const Color(0xFF1B4D3E),
+            color: isCaro ? const Color(0xFF2A1F10) : const Color(0xFF1B4D3E),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.amberAccent, width: 2),
-            boxShadow: [BoxShadow(color: Colors.amberAccent.withOpacity(0.3), blurRadius: 20)],
+            border: Border.all(color: isCaro ? const Color(0xFFD2A679) : Colors.amberAccent, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: (isCaro ? const Color(0xFFD2A679) : Colors.amberAccent).withOpacity(0.3), 
+                blurRadius: 20
+              )
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.videogame_asset, color: Colors.amberAccent, size: 40),
+              Icon(
+                isCaro ? Icons.grid_on_rounded : Icons.videogame_asset, 
+                color: isCaro ? const Color(0xFFD2A679) : Colors.amberAccent, 
+                size: 40
+              ),
               const SizedBox(height: 15),
               Text('${data['fromName']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-              const Text('mời bạn chơi Tiến Lên!', style: TextStyle(color: Colors.white70, fontSize: 14)),
+              Text(
+                isCaro ? 'mời bạn chơi Cờ Caro!' : 'mời bạn chơi Tiến Lên!', 
+                style: const TextStyle(color: Colors.white70, fontSize: 14)
+              ),
               const SizedBox(height: 10),
-              Text('Cược: ${data['betAmount']} đ', style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold)),
+              if (!isCaro)
+                Text('Cược: ${data['betAmount']} đ', style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold)),
               const SizedBox(height: 25),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -348,12 +383,31 @@ class GlobalInviteListener extends StatelessWidget {
                   ElevatedButton(
                     onPressed: () async {
                       await FirebaseFirestore.instance.collection('invites').doc(inviteId).update({'status': 'accepted'});
-                      NotificationService.navigatorKey.currentState?.pushNamed(
-                        '/tien_len_room',
-                        arguments: {'roomId': data['roomId']}
-                      );
+                      
+                      if (isCaro && currentUser != null) {
+                        await CaroService().joinRoom(
+                          roomId: data['roomId'],
+                          uid: currentUser.uid,
+                          name: currentUser.displayName ?? "Guest",
+                        );
+                        NotificationService.navigatorKey.currentState?.pushNamed(
+                          '/caro_room',
+                          arguments: {
+                            'roomId': data['roomId'],
+                            'currentUserUid': currentUser.uid,
+                          }
+                        );
+                      } else {
+                        NotificationService.navigatorKey.currentState?.pushNamed(
+                          '/tien_len_room',
+                          arguments: {'roomId': data['roomId']}
+                        );
+                      }
                     },
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.amberAccent, foregroundColor: Colors.black),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isCaro ? const Color(0xFFD2A679) : Colors.amberAccent, 
+                      foregroundColor: Colors.black
+                    ),
                     child: const Text('THAM GIA'),
                   ),
                 ],

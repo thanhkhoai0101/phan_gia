@@ -27,7 +27,7 @@ class BauCuaService {
         .map((doc) => BauCuaRoom.fromFirestore(doc));
   }
 
-  Future<String> createRoom(String hostName, int betLimit) async {
+  Future<String> createRoom(String hostName, int betLimit, {bool isAuto = false}) async {
     final user = _authService.currentUser;
     if (user == null) throw Exception('User not logged in');
 
@@ -45,6 +45,7 @@ class BauCuaService {
       ],
       currentBets: [],
       timerSeconds: 0,
+      isAuto: isAuto,
     );
 
     await roomDoc.set(room.toMap());
@@ -67,6 +68,7 @@ class BauCuaService {
     if (user == null) return;
 
     final bet = BauCuaBet(
+      id: '${DateTime.now().millisecondsSinceEpoch}_${user.uid}',
       userId: user.uid,
       userName: userName,
       mascotIndex: mascotIndex,
@@ -97,6 +99,11 @@ class BauCuaService {
     if (resultDice != null) updates['resultDice'] = resultDice;
     if (timer != null) updates['timerSeconds'] = timer;
     if (status == 'rolling') updates['lastRollAt'] = Timestamp.now();
+    
+    if (status == 'preparing' || status == 'waiting') {
+      updates['currentBets'] = [];
+      updates['resultDice'] = [];
+    }
     
     await _firestore.collection('bau_cua_rooms').doc(roomId).update(updates);
   }
@@ -136,10 +143,10 @@ class BauCuaService {
     List<String> historyStrings = newHistory.map((h) => h.join(',')).toList();
 
     batch.update(_firestore.collection('bau_cua_rooms').doc(roomId), {
-      'currentBets': [],
       'status': 'result',
       'timerSeconds': 5, // Show result for 5 seconds
       'history': historyStrings,
+      'resultDice': resultDice,
     });
 
     await batch.commit();

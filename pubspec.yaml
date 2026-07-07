@@ -62,6 +62,9 @@ dependencies:
   font_awesome_flutter: ^10.7.0
   lucide_icons: ^0.257.0
   path: ^1.9.1
+  flame: ^1.35.1
+  crypto: ^3.0.6
+  flame_svg: ^1.11.20
 
 
 
@@ -93,6 +96,7 @@ flutter:
     - assets/images/
     - assets/images/cute_animals/
     - assets/images/baucua/
+    - assets/images/ban_ga/
 #    - assets/sounds/baucua/
     - assets/sounds/
 

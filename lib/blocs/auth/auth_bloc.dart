@@ -42,7 +42,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onRegisterRequested(RegisterRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
-    String? error = await authService.register(event.email, event.password, event.displayName);
+    String? error = await authService.register(
+      event.email, 
+      event.password, 
+      event.displayName, 
+      avatarUrl: event.avatarUrl,
+      dateOfBirth: event.dateOfBirth,
+    );
     if (error != null) {
       emit(AuthError(error));
       emit(AuthUnauthenticated());

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../services/notification_service.dart';
 import '../../blocs/caro/caro_bloc.dart';
 import '../../services/caro_service.dart';
 import '../../widgets/board_canvans.dart';
@@ -17,6 +19,22 @@ class CaroScreen extends StatefulWidget {
 
 class _CaroScreenState extends State<CaroScreen> {
   bool _resultShown = false;
+
+  @override
+  void initState() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    super.initState();
+  }
+  @override
+  void dispose() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -147,10 +165,132 @@ class _CaroScreenState extends State<CaroScreen> {
               "Gửi mã phòng cho bạn bè nhé!",
               style: TextStyle(color: Colors.grey, fontSize: 14),
             ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD2A679),
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+              onPressed: () {
+                final state = context.read<CaroBloc>().state;
+                if (state.room != null) {
+                  _showInviteDialog(context, state.room!.roomId, state.room!.hostName);
+                }
+              },
+              icon: const Icon(Icons.person_add),
+              label: const Text("Mời bạn bè", style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  void _showInviteDialog(BuildContext context, String roomId, String hostName) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                "Mời bạn chơi Cờ Caro",
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('users').snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final users = snapshot.data!.docs
+                      .where((doc) => doc.id != widget.currentUserUid)
+                      .toList();
+
+                  if (users.isEmpty) {
+                    return const Center(
+                      child: Text("Không có người dùng nào khác", style: TextStyle(color: Colors.grey)),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: users.length,
+                    itemBuilder: (context, index) {
+                      final userData = users[index].data() as Map<String, dynamic>;
+                      final toUid = users[index].id;
+                      final toName = userData['displayName'] ?? 'Người chơi';
+                      final fcmToken = userData['fcmToken'];
+
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: const Color(0xFFD2A679),
+                          child: Text(toName[0].toUpperCase(), style: const TextStyle(color: Colors.black)),
+                        ),
+                        title: Text(toName, style: const TextStyle(color: Colors.white)),
+                        trailing: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.greenAccent.withOpacity(0.2),
+                            foregroundColor: Colors.greenAccent,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: () => _sendInvite(toUid, toName, fcmToken, roomId, hostName),
+                          child: const Text("Mời"),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _sendInvite(String toUid, String toName, String? fcmToken, String roomId, String hostName) async {
+    // 1. Tạo bản ghi invite trong Firestore
+    final inviteRef = await FirebaseFirestore.instance.collection('invites').add({
+      'fromUid': widget.currentUserUid,
+      'fromName': hostName,
+      'toUid': toUid,
+      'toName': toName,
+      'roomId': roomId,
+      'game': 'caro', // Đánh dấu là Caro
+      'status': 'pending',
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    // 2. Gửi Push Notification (nếu người dùng có fcmToken)
+    if (fcmToken != null && fcmToken.isNotEmpty) {
+      await NotificationService.sendPushNotification(
+        fcmToken,
+        "Lời mời chơi Cờ Caro 🎮",
+        "$hostName vừa mời bạn tham gia ván Cờ Caro. Vào chơi ngay!",
+        type: 'game_invite',
+        game: 'caro',
+        inviteId: inviteRef.id,
+        roomId: roomId,
+        otherUserId: widget.currentUserUid,
+        otherUserName: hostName,
+      );
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Đã gửi lời mời đến $toName")),
+      );
+    }
   }
 
   Widget _buildPlayerCard({

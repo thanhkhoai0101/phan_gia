@@ -12,11 +12,11 @@ class BauCuaState extends Equatable {
   @override
   List<Object?> get props => [room, isLoading, error];
 
-  BauCuaState copyWith({BauCuaRoom? room, bool? isLoading, String? error}) {
+  BauCuaState copyWith({BauCuaRoom? room, bool? isLoading, String? error, bool clearError = false}) {
     return BauCuaState(
       room: room ?? this.room,
       isLoading: isLoading ?? this.isLoading,
-      error: error ?? this.error,
+      error: clearError ? null : (error ?? this.error),
     );
   }
 }
