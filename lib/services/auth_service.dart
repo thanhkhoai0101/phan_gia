@@ -11,41 +11,59 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
 
   Stream<UserModel?> authStateChanges() {
-    return _auth.authStateChanges().asyncExpand((User? user) async* {
-      if (user == null) {
-        yield null;
-      } else {
-        yield* _firestore.collection('users').doc(user.uid).snapshots().asyncMap((doc) async {
-          if (!doc.exists) return null;
-          
-          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-          String lastLogin = data['lastLogin'] ?? '';
-          String today = _getTodayString();
-          
-          int currentBalance = data['balance'] ?? 0;
+    late StreamController<UserModel?> controller;
+    StreamSubscription<User?>? authSub;
+    StreamSubscription<DocumentSnapshot>? userSub;
 
-          // Process daily login if it's a new day
-          if (lastLogin != today) {
-            currentBalance += 50000;
-            // Update silently in background
-            _firestore.collection('users').doc(user.uid).update({
-              'balance': currentBalance,
-              'lastLogin': today,
+    controller = StreamController<UserModel?>(
+      onListen: () {
+        authSub = _auth.authStateChanges().listen((User? user) {
+          userSub?.cancel();
+          if (user == null) {
+            controller.add(null);
+          } else {
+            userSub = _firestore.collection('users').doc(user.uid).snapshots().listen((doc) {
+              if (!doc.exists) {
+                controller.add(null);
+                return;
+              }
+              
+              Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+              String lastLogin = data['lastLogin'] ?? '';
+              String today = _getTodayString();
+              
+              int currentBalance = data['balance'] ?? 0;
+
+              // Process daily login if it's a new day
+              if (lastLogin != today) {
+                currentBalance += 50000;
+                // Update silently in background
+                _firestore.collection('users').doc(user.uid).update({
+                  'balance': currentBalance,
+                  'lastLogin': today,
+                });
+              }
+
+              controller.add(UserModel(
+                uid: user.uid,
+                email: data['email'] ?? '',
+                displayName: data['displayName'] ?? '',
+                balance: currentBalance,
+                lastLogin: today,
+                avatarUrl: data['avatarUrl'],
+                coverUrl: data['coverUrl'],
+              ));
             });
           }
-
-          return UserModel(
-            uid: user.uid,
-            email: data['email'] ?? '',
-            displayName: data['displayName'] ?? '',
-            balance: currentBalance,
-            lastLogin: today,
-            avatarUrl: data['avatarUrl'],
-            coverUrl: data['coverUrl'],
-          );
         });
-      }
-    });
+      },
+      onCancel: () {
+        authSub?.cancel();
+        userSub?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   String _getTodayString() {

@@ -2,20 +2,24 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:phan_family/blocs/feed/feed_bloc.dart';
+import 'package:phan_family/blocs/feed/feed_event.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_event.dart';
 import '../../blocs/auth/auth_state.dart';
 import '../../models/user_model.dart';
 import '../../models/post_model.dart';
+import '../../services/chat_service.dart';
 import '../../services/feed_service.dart';
 import '../../services/cloudinary_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+import '../chat/chat_detail_screen.dart';
 import '../feed/widgets/post_card.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
-
+  const ProfileScreen({super.key, this.userModel});
+  final UserModel? userModel;
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
@@ -40,7 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final String? oldUrl = isAvatar ? user.avatarUrl : user.coverUrl;
 
       // Upload ảnh mới lên Cloudinary
-      final String? downloadUrl = await _cloudinary.uploadImage(File(image.path));
+      final String? downloadUrl = await _cloudinary.uploadMediaFile(File(image.path));
       if (downloadUrl == null) throw Exception('Không thể tải ảnh lên Cloudinary');
 
       // Xoá ảnh cũ (không block UI, chạy ngầm)
@@ -102,19 +106,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: const Text('Hồ sơ', style: TextStyle(color: Colors.white),),
         backgroundColor: const Color(0xFFF57C00),
         foregroundColor: Colors.white,
+        actions: widget.userModel == null ? null : [
+          IconButton(
+            icon: const Icon(Icons.chat_outlined, color: Colors.blue),
+            onPressed: () async {
+              final authState = context.read<AuthBloc>().state;
+              if (authState is AuthAuthenticated) {
+                // Hiển thị loading (tuỳ chọn)
+                showDialog(
+                  context: context, 
+                  barrierDismissible: false,
+                  builder: (context) => const Center(child: CircularProgressIndicator()),
+                );
+
+                try {
+                  final chatService = ChatService();
+                  final currentUserId = authState.user.uid;
+                  final otherUserId = widget.userModel!.uid;
+                  
+                  final chatId = await chatService.getOrCreateChat(currentUserId, otherUserId);
+                  
+                  if (!context.mounted) return;
+                  Navigator.pop(context); // Tắt loading
+                  
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ChatDetailScreen(
+                        chatId: chatId,
+                        otherUserName: widget.userModel!.displayName.isEmpty ? 'Người dùng' : widget.userModel!.displayName,
+                        otherUserId: widget.userModel!.uid,
+                        otherUserAvatar: widget.userModel!.avatarUrl,
+                      ),
+                    ),
+                  );
+                } catch (e) {
+                  if (context.mounted) {
+                    Navigator.pop(context); // Tắt loading
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+                  }
+                }
+              }
+            },
+          )
+        ],
       ),
       body: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
           if (state is AuthAuthenticated) {
-            final user = state.user;
+            final user = widget.userModel ?? state.user;
             return Stack(
               children: [
                 SingleChildScrollView(
                   child: Column(
                     children: [
-                      // GỘP COVER VÀ AVATAR VÀO ĐÂY ĐỂ ĐẢM BẢO CUỘN ĐƯỢC MƯỢT MÀ
                       SizedBox(
-                        height: 250, // 200 chiều cao cover + 50 phần nhô ra của avatar
+                        height: 250,
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [
@@ -132,7 +179,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               )
                                   : const Center(child: Icon(Icons.image, size: 50, color: Colors.grey)),
                             ),
-                            Positioned(
+                            widget.userModel != null ? Container() : Positioned(
                               top: 10,
                               right: 10,
                               child: IconButton(
@@ -140,7 +187,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 onPressed: () => _pickAndUploadImage(context, user, false),
                               ),
                             ),
-                            // Avatar đặt trong này sẽ cuộn theo màn hình luôn
                             Positioned(
                               bottom: 0,
                               left: MediaQuery.of(context).size.width / 2 - 50,
@@ -157,7 +203,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           : const AssetImage('assets/images/logo.png') as ImageProvider,
                                     ),
                                   ),
-                                  Positioned(
+                                  widget.userModel != null ? Container() : Positioned(
                                     bottom: 0,
                                     right: 0,
                                     child: CircleAvatar(
@@ -187,7 +233,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.edit, size: 20),
-                            onPressed: () => _editDisplayName(context, user),
+                            onPressed: () => widget.userModel == null ? null :_editDisplayName(context, user),
                           ),
                         ],
                       ),
@@ -274,11 +320,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               return PostCard(
                                 post: post,
                                 currentUser: user,
-                                onReact: (type) {
-                                  // Xử lý sự kiện thả tim/like bài viết của ông ở đây nếu cần gọi xuống service
+                                onReact: (reactionType) {
+                                  context.read<FeedBloc>().add(
+                                    ToggleReactionPost(
+                                      postId: post.id,
+                                      userId: user.uid,
+                                      reactionType: reactionType,
+                                    ),
+                                  );
                                 },
                                 onDelete: () {
-                                  // Xử lý sự kiện xóa bài viết
+                                  context.read<FeedBloc>().add(DeletePost(post.id));
                                 },
                               );
                             },

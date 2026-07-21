@@ -66,8 +66,6 @@ dependencies:
   crypto: ^3.0.6
   flame_svg: ^1.11.20
 
-
-
 dependency_overrides:
   share_plus: 11.0.0
   record_platform_interface: 1.3.0
@@ -99,6 +97,7 @@ flutter:
     - assets/images/ban_ga/
 #    - assets/sounds/baucua/
     - assets/sounds/
+    - assets/words/
 
 flutter_launcher_icons:
   android: "launcher_icon"

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:phan_family/blocs/show_password_cubit.dart';
 import 'package:phan_family/features/auth/register_screen.dart';
 
 import '../../blocs/auth/auth_bloc.dart';
@@ -18,11 +19,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
 
   void _login() {
+    FocusManager.instance.primaryFocus?.unfocus();
+
     context.read<AuthBloc>().add(
       LoginRequested(
         _emailController.text.trim(),
         _passwordController.text.trim(),
-      )
+      ),
     );
   }
 
@@ -32,10 +35,12 @@ class _LoginScreenState extends State<LoginScreen> {
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.redAccent,
-            ));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
           }
         },
         child: Container(
@@ -49,9 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: SafeArea(
             child: Center(
               child: Container(
-                  constraints: const BoxConstraints(
-                    maxWidth: 400,
-                  ),
+                constraints: const BoxConstraints(maxWidth: 400),
                 padding: const EdgeInsets.all(32),
                 margin: const EdgeInsets.symmetric(horizontal: 24),
                 decoration: BoxDecoration(
@@ -68,14 +71,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       const Text(
                         'Phan Gia',
                         style: TextStyle(
-                          fontSize: 28, 
-                          fontWeight: FontWeight.bold, 
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
                           color: Colors.white,
                           letterSpacing: 2.0,
                         ),
                       ),
                       const SizedBox(height: 30),
-                      const Text('ĐĂNG NHẬP', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFFF6B6B))),
+                      const Text(
+                        'ĐĂNG NHẬP',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFFF6B6B),
+                        ),
+                      ),
                       const SizedBox(height: 20),
                       TextField(
                         controller: _emailController,
@@ -87,27 +97,54 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: const TextStyle(color: Colors.white),
                       ),
                       const SizedBox(height: 16),
-                      TextField(
-                        controller: _passwordController,
-                        decoration: const InputDecoration(
-                          labelText: 'Mật khẩu',
-                          prefixIcon: Icon(Icons.lock, color: Colors.white54),
-                        ),
-                        obscureText: true,
-                        style: const TextStyle(color: Colors.white),
+
+                      BlocBuilder<ShowPasswordCubit, bool>(
+                        builder: (context, state) {
+                          return TextField(
+                            controller: _passwordController,
+                            decoration: InputDecoration(
+                              labelText: 'Mật khẩu',
+                              prefixIcon: Icon(
+                                Icons.lock,
+                                color: Colors.white54,
+                              ),
+                              suffixIcon: IconButton(
+                                onPressed: () {
+                                  context.read<ShowPasswordCubit>().toggle();
+                                },
+                                icon: Icon(
+                                  state
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                ),
+                              ),
+                            ),
+                            obscureText: state,
+                            style: const TextStyle(color: Colors.white),
+                          );
+                        },
                       ),
+
                       const SizedBox(height: 30),
                       BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, state) {
                           if (state is AuthLoading) {
-                            return const CircularProgressIndicator(color: Color(0xFFFF6B6B));
+                            return const CircularProgressIndicator(
+                              color: Color(0xFFFF6B6B),
+                            );
                           }
                           return SizedBox(
                             width: double.infinity,
                             height: 50,
                             child: ElevatedButton(
                               onPressed: _login,
-                              child: const Text('ĐĂNG NHẬP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              child: const Text(
+                                'ĐĂNG NHẬP',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           );
                         },
@@ -117,11 +154,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const RegisterScreen(),
+                            ),
                           );
                         },
-                        child: const Text('Chưa có tài khoản? Đăng ký ngay', style: TextStyle(color: Colors.white70)),
-                      )
+                        child: const Text(
+                          'Chưa có tài khoản? Đăng ký ngay',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ),
                     ],
                   ),
                 ),

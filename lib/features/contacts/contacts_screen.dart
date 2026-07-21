@@ -1,6 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:phan_family/features/profile/profile_screen.dart';
+import 'package:phan_family/models/user_model.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_state.dart';
 import '../../services/chat_service.dart';
@@ -18,16 +21,23 @@ class ContactsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Thành viên gia đình', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Thành viên gia đình',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('users').snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          
-          final users = snapshot.data!.docs.where((doc) => doc.id != currentUser.uid).toList();
-          
-          if (users.isEmpty) return const Center(child: Text('Chưa có thành viên nào khác.'));
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
+
+          final users = snapshot.data!.docs
+              .where((doc) => doc.id != currentUser.uid)
+              .toList();
+
+          if (users.isEmpty)
+            return const Center(child: Text('Chưa có thành viên nào khác.'));
 
           return ListView.builder(
             itemCount: users.length,
@@ -44,27 +54,46 @@ class ContactsScreen extends StatelessWidget {
                     backgroundColor: Colors.grey[800],
                     backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
                         ? CachedNetworkImageProvider(avatarUrl)
-                        : const AssetImage('assets/images/logo.png') as ImageProvider,
+                        : const AssetImage('assets/images/logo.png')
+                              as ImageProvider,
                   ),
                 ),
-                title: Text(userName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(
+                  userName,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 subtitle: const Text('Đang hoạt động'),
-                trailing:  const Icon(Icons.chat_outlined, color: Colors.blue),
-                onTap: ()async {
-                  final chatId = await ChatService().getOrCreateChat(currentUser.uid, userId);
-                  if (context.mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ChatDetailScreen(
-                          chatId: chatId,
-                          otherUserName: userName,
-                          otherUserId: userId,
-                          otherUserAvatar: avatarUrl,
-                        ),
-                      ),
+                trailing: IconButton(
+                  icon: Icon(Icons.chat_outlined, color: Colors.blue),
+                  onPressed: () async {
+                    final chatId = await ChatService().getOrCreateChat(
+                      currentUser.uid,
+                      userId,
                     );
-                  }
+                    if (context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatDetailScreen(
+                            chatId: chatId,
+                            otherUserName: userName,
+                            otherUserId: userId,
+                            otherUserAvatar: avatarUrl,
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfileScreen(
+                        userModel: UserModel.fromMap(userData, userId),
+                      ),
+                    ),
+                  );
                 },
               );
             },

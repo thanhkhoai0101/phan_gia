@@ -55,7 +55,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
         authorAvatar: widget.currentUser.avatarUrl ?? '',
         content: text,
         // TRUYỀN THÊM parentId: Nếu đang reply thì truyền id của comment cha, không thì null
-        parentId: _replyingToComment?.id,
+        parentId: _replyingToComment?.id ?? '',
       ),
     );
 
@@ -93,8 +93,8 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
       padding: EdgeInsets.only(bottom: keyboardSpace),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -172,7 +172,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
           // ─── THANH NHẬP LIỆU & BANNER REPLY ───────────────────────
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              // color: Colors.white,
               border: Border(top: BorderSide(color: Colors.grey.shade300)),
             ),
             child: Column(
@@ -181,7 +181,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                 // Banner hiển thị trạng thái "Đang trả lời..."
                 if (_replyingToComment != null)
                   Container(
-                    color: Colors.grey.shade100,
+                    // color: Colors.grey.shade100,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(
                       children: [
@@ -210,7 +210,6 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                           decoration: InputDecoration(
                             hintText: _replyingToComment != null ? 'Trả lời bình luận...' : 'Viết bình luận...',
                             filled: true,
-                            fillColor: Colors.grey.shade100,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(24),
@@ -345,7 +344,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
+                            color: Colors.grey.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Column(
@@ -369,7 +368,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                // color: Colors.white,
                                 borderRadius: BorderRadius.circular(10),
                                 boxShadow: const [
                                   BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))

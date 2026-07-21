@@ -41,6 +41,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Nhắn tin', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.group_add_outlined),
+            onPressed: () => _showCreateGroupDialog(context),
+          ),
+        ],
       ),
       body: StreamBuilder<List<ChatModel>>(
         stream: _chatStream,
@@ -157,6 +163,152 @@ class _ChatListScreenState extends State<ChatListScreen> {
               otherUserAvatar: avatarUrl,
             ),
           ),
+        );
+      },
+    );
+  }
+
+  void _showCreateGroupDialog(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return;
+    final currentUser = authState.user;
+
+    String groupName = "";
+    List<String> selectedMemberIds = [];
+    bool addBot = true;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF162435),
+              title: const Text("Tạo nhóm chat mới", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: "Tên nhóm",
+                          labelStyle: TextStyle(color: Colors.grey),
+                          enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                          focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.blueAccent)),
+                        ),
+                        onChanged: (val) => groupName = val.trim(),
+                      ),
+                      const SizedBox(height: 20),
+                      CheckboxListTile(
+                        title: const Text("Thêm Bot Nối Từ 🤖", style: TextStyle(color: Colors.white)),
+                        subtitle: const Text("Chơi game nối từ trong chat bằng cách gõ !noitu", style: TextStyle(color: Colors.grey, fontSize: 11)),
+                        value: addBot,
+                        activeColor: Colors.blueAccent,
+                        checkColor: Colors.white,
+                        onChanged: (val) {
+                          setDialogState(() {
+                            addBot = val ?? false;
+                          });
+                        },
+                      ),
+                      const Divider(color: Colors.white24),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text("Chọn thành viên:", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                      FutureBuilder<QuerySnapshot>(
+                        future: FirebaseFirestore.instance.collection('users').get(),
+                        builder: (context, userSnapshot) {
+                          if (!userSnapshot.hasData) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          final members = userSnapshot.data!.docs
+                              .where((doc) => doc.id != currentUser.uid)
+                              .toList();
+                          if (members.isEmpty) {
+                            return const Text("Không tìm thấy thành viên khác", style: TextStyle(color: Colors.grey));
+                          }
+                          return Column(
+                            children: members.map((doc) {
+                              final userData = doc.data() as Map<String, dynamic>;
+                              final name = userData['displayName'] ?? 'Người dùng';
+                              final uid = doc.id;
+                              final isSelected = selectedMemberIds.contains(uid);
+                              return CheckboxListTile(
+                                title: Text(name, style: const TextStyle(color: Colors.white)),
+                                value: isSelected,
+                                activeColor: Colors.blueAccent,
+                                onChanged: (checked) {
+                                  setDialogState(() {
+                                    if (checked == true) {
+                                      selectedMemberIds.add(uid);
+                                    } else {
+                                      selectedMemberIds.remove(uid);
+                                    }
+                                  });
+                                },
+                              );
+                            }).toList(),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Hủy", style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+                  onPressed: () async {
+                    if (groupName.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Vui lòng nhập tên nhóm!"), backgroundColor: Colors.redAccent),
+                      );
+                      return;
+                    }
+                    if (selectedMemberIds.isEmpty && !addBot) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Vui lòng chọn ít nhất 1 thành viên hoặc thêm Bot!"), backgroundColor: Colors.redAccent),
+                      );
+                      return;
+                    }
+
+                    // Gọi dịch vụ tạo nhóm
+                    final chatId = await _chatService.createGroupChat(
+                      creatorId: currentUser.uid,
+                      groupName: groupName,
+                      memberIds: selectedMemberIds,
+                      addBot: addBot,
+                    );
+
+                    if (context.mounted) {
+                      Navigator.pop(context); // Đóng Dialog
+                      // Chuyển trực tiếp tới phòng chat nhóm mới
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatDetailScreen(
+                            chatId: chatId,
+                            otherUserName: groupName,
+                            otherUserId: chatId, // dùng tạm chatId cho group
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text("Tạo", style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
         );
       },
     );

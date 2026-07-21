@@ -7,6 +7,7 @@ import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
 import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
 import 'blocs/auth/auth_bloc.dart';
 import 'blocs/auth/auth_state.dart';
+import 'blocs/show_password_cubit.dart';
 import 'blocs/theme/theme_bloc.dart';
 import 'blocs/theme/theme_state.dart';
 import 'blocs/feed/feed_bloc.dart';
@@ -49,6 +50,7 @@ void main() async {
         BlocProvider<AuthBloc>(create: (context) => AuthBloc(authService: AuthService())),
         BlocProvider<ThemeBloc>(create: (context) => ThemeBloc(initialDark: isDarkMode)),
         BlocProvider<FeedBloc>(create: (context) => FeedBloc(feedService: FeedService())),
+        BlocProvider(create: (context) => ShowPasswordCubit())
       ],
       child: const MyApp(),
     ),
@@ -259,7 +261,7 @@ class MyApp extends StatelessWidget {
                   builder: (context) {
                     final authState = context.read<AuthBloc>().state;
                     final uid = args['currentUserUid'] ?? (authState is AuthAuthenticated ? authState.user.uid : '');
-                    
+
                     return BlocProvider(
                       create: (_) => CaroBloc(CaroService())..add(ListenRoomEvent(args['roomId'])),
                       child: CaroScreen(currentUserUid: uid),
@@ -318,10 +320,10 @@ class GlobalInviteListener extends StatelessWidget {
                   if (tb == null) return 1;
                   return tb.compareTo(ta);
                 });
-                
+
                 final inviteDoc = invites.first;
                 final data = inviteDoc.data() as Map<String, dynamic>;
-                
+
                 return _buildInviteOverlay(context, inviteDoc.id, data);
               },
             ),
@@ -334,7 +336,7 @@ class GlobalInviteListener extends StatelessWidget {
   Widget _buildInviteOverlay(BuildContext context, String inviteId, Map<String, dynamic> data) {
     final game = data['game'] ?? 'tien_len';
     final isCaro = game == 'caro';
-    
+
     final authState = context.read<AuthBloc>().state;
     final currentUser = authState is AuthAuthenticated ? authState.user : null;
 
@@ -350,7 +352,7 @@ class GlobalInviteListener extends StatelessWidget {
             border: Border.all(color: isCaro ? const Color(0xFFD2A679) : Colors.amberAccent, width: 2),
             boxShadow: [
               BoxShadow(
-                color: (isCaro ? const Color(0xFFD2A679) : Colors.amberAccent).withOpacity(0.3), 
+                color: (isCaro ? const Color(0xFFD2A679) : Colors.amberAccent).withOpacity(0.3),
                 blurRadius: 20
               )
             ],
@@ -359,14 +361,14 @@ class GlobalInviteListener extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                isCaro ? Icons.grid_on_rounded : Icons.videogame_asset, 
-                color: isCaro ? const Color(0xFFD2A679) : Colors.amberAccent, 
+                isCaro ? Icons.grid_on_rounded : Icons.videogame_asset,
+                color: isCaro ? const Color(0xFFD2A679) : Colors.amberAccent,
                 size: 40
               ),
               const SizedBox(height: 15),
               Text('${data['fromName']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
               Text(
-                isCaro ? 'mời bạn chơi Cờ Caro!' : 'mời bạn chơi Tiến Lên!', 
+                isCaro ? 'mời bạn chơi Cờ Caro!' : 'mời bạn chơi Tiến Lên!',
                 style: const TextStyle(color: Colors.white70, fontSize: 14)
               ),
               const SizedBox(height: 10),
@@ -383,7 +385,7 @@ class GlobalInviteListener extends StatelessWidget {
                   ElevatedButton(
                     onPressed: () async {
                       await FirebaseFirestore.instance.collection('invites').doc(inviteId).update({'status': 'accepted'});
-                      
+
                       if (isCaro && currentUser != null) {
                         await CaroService().joinRoom(
                           roomId: data['roomId'],
@@ -405,7 +407,7 @@ class GlobalInviteListener extends StatelessWidget {
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isCaro ? const Color(0xFFD2A679) : Colors.amberAccent, 
+                      backgroundColor: isCaro ? const Color(0xFFD2A679) : Colors.amberAccent,
                       foregroundColor: Colors.black
                     ),
                     child: const Text('THAM GIA'),

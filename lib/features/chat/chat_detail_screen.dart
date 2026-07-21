@@ -270,7 +270,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         // ),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
-        title: Text(widget.otherUserName, style: TextStyle(color: Colors.white),),
+        title: StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance.collection('chats').doc(widget.chatId).snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData || !snapshot.data!.exists) {
+              return Text(widget.otherUserName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold));
+            }
+            final data = snapshot.data!.data() as Map<String, dynamic>;
+            final isGroup = data['isGroup'] ?? false;
+            final name = isGroup ? (data['groupName'] ?? 'Nhóm') : widget.otherUserName;
+            return Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold));
+          },
+        ),
         centerTitle: false,
         actions: [
           _buildCallButton(isVideo: false),
@@ -322,10 +333,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         builder: (context, chatSnapshot) {
           String? bgImage;
           String? bubbleStyle;
+          bool isGroup = false;
           if (chatSnapshot.hasData && chatSnapshot.data!.exists) {
             final data = chatSnapshot.data!.data() as Map<String, dynamic>;
             bgImage = data['backgroundImage'];
             bubbleStyle = data['bubbleStyle'];
+            isGroup = data['isGroup'] ?? false;
           }
 
           BoxDecoration? bgDecoration;
@@ -368,12 +381,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         itemBuilder: (context, index) {
                           final message = messages[index];
                           final isMe = message.senderId == currentUserId;
-                          return _buildMessageBubble(message, isMe, bubbleStyle);
+                          return _buildMessageBubble(message, isMe, bubbleStyle, isGroup);
                         },
                       );
                     },
                   ),
                 ),
+                _buildWordChainHint(currentUserId),
                 _buildMessageInput(bgDecoration != null),
               ],
             ),
@@ -454,7 +468,84 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
   }
 
-  Widget _buildMessageBubble(MessageModel message, bool isMe, String? bubbleStyle) {
+  Widget _buildMessageBubble(MessageModel message, bool isMe, String? bubbleStyle, bool isGroup) {
+    final isBot = message.senderId == 'bot_noitu';
+    
+    // Nếu là Bot, hiển thị kèm avatar của Bot bên trái
+    if (isBot) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.deepPurpleAccent.withOpacity(0.2),
+                child: const Icon(Icons.smart_toy, color: Colors.deepPurpleAccent, size: 18),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Bot Nối Từ 🤖", 
+                      style: TextStyle(color: Colors.amberAccent, fontSize: 11, fontWeight: FontWeight.bold)
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF2A1B4E), Color(0xFF1B0F2A)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(4),
+                          topRight: Radius.circular(16),
+                          bottomLeft: Radius.circular(16),
+                          bottomRight: Radius.circular(16),
+                        ),
+                        border: Border.all(color: Colors.deepPurpleAccent.withOpacity(0.8), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.deepPurpleAccent.withOpacity(0.2),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            message.text,
+                            style: TextStyle(color: Colors.white, fontSize: 14, height: 1.3),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            DateFormat('HH:mm').format(message.timestamp),
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: Colors.white60,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     Widget contentWidget;
     bool isMedia = false;
 
@@ -477,7 +568,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         break;
       case MessageType.text:
       case MessageType.call:
-      default:
         contentWidget = Text(
           message.text,
           style: const TextStyle(color: Colors.white, fontSize: 15),
@@ -515,45 +605,74 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
 
     // Default Bubble
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        padding: isMedia
-            ? (message.type == MessageType.audio ? EdgeInsets.zero : const EdgeInsets.all(2))
-            : const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
-        decoration: isMedia && message.type != MessageType.audio
-            ? null
-            : BoxDecoration(
-                color: isMe ? Colors.blueAccent : Colors.black.withOpacity(0.5),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isMe ? 16 : 4),
-                  bottomRight: Radius.circular(isMe ? 4 : 16),
-                ),
-              ),
-        child: Column(
-          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            contentWidget,
-            const SizedBox(height: 4),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: isMedia && message.type != MessageType.audio ? 8.0 : 0.0,
-              ),
-              child: Text(
-                DateFormat('HH:mm').format(message.timestamp),
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: Colors.white70,
-                ),
+    final mainBubble = Container(
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: isMedia
+          ? (message.type == MessageType.audio ? EdgeInsets.zero : const EdgeInsets.all(2))
+          : const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+      decoration: isMedia && message.type != MessageType.audio
+          ? null
+          : BoxDecoration(
+              color: isMe ? Colors.blueAccent : Colors.black.withOpacity(0.5),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(isMe ? 16 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 16),
               ),
             ),
+      child: Column(
+        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          contentWidget,
+          const SizedBox(height: 4),
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMedia && message.type != MessageType.audio ? 8.0 : 0.0,
+            ),
+            child: Text(
+              DateFormat('HH:mm').format(message.timestamp),
+              style: const TextStyle(
+                fontSize: 10,
+                color: Colors.white70,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (isGroup && !isMe) {
+      // Hiển thị tên người gửi phía trên bong bóng chat nếu là nhóm
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 20, top: 4),
+              child: FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance.collection('users').doc(message.senderId).get(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData && snapshot.data!.exists) {
+                    final data = snapshot.data!.data() as Map<String, dynamic>;
+                    final name = data['displayName'] ?? 'Thành viên';
+                    return Text(name, style: const TextStyle(color: Colors.white60, fontSize: 11));
+                  }
+                  return const Text("Thành viên", style: TextStyle(color: Colors.white60, fontSize: 11));
+                },
+              ),
+            ),
+            mainBubble,
           ],
         ),
-      ),
+      );
+    }
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: mainBubble,
     );
   }
 
@@ -647,6 +766,84 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       invitees: [
         ZegoUIKitUser(id: widget.otherUserId, name: widget.otherUserName),
       ],
+    );
+  }
+
+  Widget _buildWordChainHint(String currentUserId) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('chats').doc(widget.chatId).snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || !snapshot.data!.exists) return const SizedBox();
+        final data = snapshot.data!.data() as Map<String, dynamic>;
+        final participants = List<String>.from(data['participants'] ?? []);
+        final hasBot = participants.contains('bot_noitu');
+        if (!hasBot) return const SizedBox();
+        
+        final wordChain = data['wordChain'] as Map<String, dynamic>?;
+        final isActive = wordChain?['active'] == true;
+        
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+          decoration: BoxDecoration(
+            color: isActive ? Colors.amber.withOpacity(0.1) : Colors.blueAccent.withOpacity(0.1),
+            border: Border(
+              top: BorderSide(color: isActive ? Colors.amber.withOpacity(0.2) : Colors.blueAccent.withOpacity(0.2)),
+              bottom: BorderSide(color: isActive ? Colors.amber.withOpacity(0.2) : Colors.blueAccent.withOpacity(0.2)),
+            )
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isActive ? Icons.videogame_asset : Icons.smart_toy_outlined, 
+                color: isActive ? Colors.amberAccent : Colors.blueAccent, 
+                size: 20
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isActive 
+                      ? "Đang chơi Nối Từ! Từ tiếp theo bắt đầu bằng: '${wordChain?['nextSyllable'] ?? ''}'"
+                      : "Phòng chat có Bot Nối Từ. Chat !noitu để bắt đầu!",
+                  style: TextStyle(
+                    color: isActive ? Colors.amberAccent : Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (isActive)
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    backgroundColor: Colors.redAccent.withOpacity(0.2),
+                    foregroundColor: Colors.redAccent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.stop_circle_outlined, size: 16),
+                  label: const Text("Dừng", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    _chatService.sendMessage(widget.chatId, currentUserId, "!stop");
+                  },
+                )
+              else
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    backgroundColor: Colors.blueAccent.withOpacity(0.2),
+                    foregroundColor: Colors.blueAccent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.play_circle_outline_rounded, size: 16),
+                  label: const Text("Bắt đầu", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    _chatService.sendMessage(widget.chatId, currentUserId, "!noitu");
+                  },
+                ),
+            ],
+          ),
+        );
+      }
     );
   }
 }

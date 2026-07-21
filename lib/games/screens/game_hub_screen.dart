@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:phan_family/games/blocs/caro/caro_bloc.dart';
 import 'package:phan_family/games/screens/tien_len/tien_len_lobby_screen.dart';
-import 'package:phan_family/games/services/caro_service.dart';
 
 import 'bau_cua/bau_cua_lobby_screen.dart';
 import 'caro/caro_home_screen.dart';
 import 'ban_ga/ban_ga_screen.dart';
+import 'draw_guess/draw_lobby_screen.dart';
 
 class GameHubScreen extends StatelessWidget {
-  const GameHubScreen({Key? key}) : super(key: key);
+  const GameHubScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +86,20 @@ class GameHubScreen extends StatelessWidget {
                     );
                   },
                 ),
+                _buildGameCard(
+                  context,
+                  title: 'Vẽ & Đoán',
+                  icon: Icons.brush,
+                  color: Colors.pink,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const DrawLobbyScreen()
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ],
@@ -108,9 +120,9 @@ class GameHubScreen extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
       child: Container(
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.5), width: 2),
+          border: Border.all(color: color.withValues(alpha: 0.5), width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

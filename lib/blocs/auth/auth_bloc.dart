@@ -32,7 +32,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onLoginRequested(LoginRequested event, Emitter<AuthState> emit) async {
-    emit(AuthLoading());
+    // emit(AuthLoading());
     String? error = await authService.login(event.email, event.password);
     if (error != null) {
       emit(AuthError(error));

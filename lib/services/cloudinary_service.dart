@@ -17,10 +17,12 @@ class CloudinaryService {
 
   // ── Upload ──────────────────────────────────────────────────────────
   /// Trả về [secure_url] nếu thành công, null nếu thất bại.
-  Future<String?> uploadImage(File file) async {
+  Future<String?> uploadMediaFile(File file, {String mediaType = 'image'}) async {
     try {
+      // Cloudinary gộp chung video và audio vào resource_type là 'video'
+      String resourceType = mediaType == 'image' ? 'image' : 'video';
       final url = Uri.parse(
-          'https://api.cloudinary.com/v1_1/$_cloudName/image/upload');
+          'https://api.cloudinary.com/v1_1/$_cloudName/$resourceType/upload');
 
       final request = http.MultipartRequest('POST', url)
         ..fields['upload_preset'] = _uploadPreset
@@ -30,8 +32,13 @@ class CloudinaryService {
       if (response.statusCode == 200) {
         final data = json.decode(await response.stream.bytesToString());
         return data['secure_url'] as String?;
+      } else {
+        var responseData = await response.stream.bytesToString();
+        print('❌ Lỗi Cloudinary: ${response.statusCode} - $responseData');
       }
-    } catch (_) {}
+    } catch (e) {
+      print('❌ Upload error: $e');
+    }
     return null;
   }
 
