@@ -33,6 +33,22 @@ class ChatService {
         final firstSyllable = parts[0];
         _dictionary.putIfAbsent(firstSyllable, () => []).add(word);
       }
+
+      // Also load custom words from Firestore
+      try {
+        final customSnap = await _firestore.collection('custom_words').get();
+        for (var doc in customSnap.docs) {
+          final word = (doc.data()['word'] as String?)?.trim().toLowerCase();
+          if (word == null || word.isEmpty) continue;
+          final parts = word.split(RegExp(r'\s+'));
+          if (parts.length != 2) continue;
+          final firstSyllable = parts[0];
+          if (_dictionary[firstSyllable]?.contains(word) != true) {
+            _dictionary.putIfAbsent(firstSyllable, () => []).add(word);
+          }
+        }
+      } catch (_) {}
+
       _dictionaryLoaded = true;
       print('✅ Đã nạp thành công từ điển tiếng Việt: ${_dictionary.length} âm đầu.');
     } catch (e) {
@@ -225,30 +241,9 @@ class ChatService {
     if (senderId != 'bot_noitu' && type == MessageType.text) {
       final cleanText = text.trim().toLowerCase();
       
-      // Start Command
-      if (cleanText == '!noitu') {
-        final startingWord = await _getRandomWord();
-        final parts = startingWord.split(RegExp(r'\s+'));
-        final nextSyllable = parts[1];
-        
-        await _firestore.collection('chats').doc(chatId).update({
-          'wordChain': {
-            'active': true,
-            'lastWord': startingWord,
-            'nextSyllable': nextSyllable,
-            'wordsPlayed': [startingWord],
-            'lastPlayerId': 'bot_noitu',
-          }
-        });
-        
-        // Let the bot announce the start
-        await sendMessage(
-          chatId, 
-          'bot_noitu', 
-          "🎮 **Trò chơi Nối Từ bắt đầu!**\nTừ khởi đầu: **$startingWord**.\nHãy nối tiếp từ bắt đầu bằng chữ '**$nextSyllable**'!"
-        );
-        return;
-      }
+      // !noitu is now intercepted by the UI — ChatDetailScreen shows a dialog.
+      // If somehow it reaches here, ignore it gracefully.
+      if (cleanText == '!noitu') return;
       
       // Stop Command
       if (cleanText == '!stop') {
@@ -260,13 +255,94 @@ class ChatService {
         }
         return;
       }
+
+      // !add Command — only khoai@gmail.com can add words
+      if (cleanText.startsWith('!add ')) {
+        final newWord = cleanText.substring(5).trim().toLowerCase();
+        
+        // Check permission: only khoai@gmail.com
+        String senderEmail = '';
+        try {
+          final userDoc = await _firestore.collection('users').doc(senderId).get();
+          senderEmail = (userDoc.data()?['email'] as String?) ?? '';
+        } catch (_) {}
+
+        if (senderEmail != 'khoai@gmail.com') {
+          await sendMessage(
+            chatId,
+            'bot_noitu',
+            "🔒 Chỉ tài khoản **admin** mới được thêm từ vào từ điển!",
+          );
+          return;
+        }
+
+        // Validate: must be exactly 2 syllables
+        final wordParts = newWord.split(RegExp(r'\s+'));
+        if (wordParts.length != 2) {
+          await sendMessage(
+            chatId,
+            'bot_noitu',
+            "❌ Từ phải có đúng **2 âm tiết** (ví dụ: `điểm danh`). Bạn đã nhập ${wordParts.length} âm tiết.",
+          );
+          return;
+        }
+
+        // Check if word already exists in dictionary
+        await _loadDictionaryIfNeeded();
+        final firstSyllable = wordParts[0];
+        if (_dictionary[firstSyllable]?.contains(newWord) == true) {
+          await sendMessage(
+            chatId,
+            'bot_noitu',
+            "⚠️ Từ '**$newWord**' đã có sẵn trong từ điển rồi!",
+          );
+          return;
+        }
+
+        // Add to in-memory dictionary
+        _dictionary.putIfAbsent(firstSyllable, () => []).add(newWord);
+
+        // Persist to Firestore so it survives app restarts
+        await _firestore.collection('custom_words').add({
+          'word': newWord,
+          'addedBy': senderId,
+          'addedAt': FieldValue.serverTimestamp(),
+        });
+
+        await sendMessage(
+          chatId,
+          'bot_noitu',
+          "✅ Đã thêm từ '**$newWord**' vào từ điển thành công!",
+        );
+        return;
+      }
       
       // Game Play validation
       if (wordChain != null && wordChain['active'] == true) {
         final parts = cleanText.split(RegExp(r'\s+'));
         final expectedSyllable = (wordChain['nextSyllable'] as String).toLowerCase();
+        final botPlays = wordChain['botPlays'] == true;
+        final int currentFailCount = (wordChain['failCount'] as int?) ?? 0;
+        final String lastCorrectPlayerId = (wordChain['lastCorrectPlayerId'] as String?) ?? '';
+        final String lastPlayerId = (wordChain['lastPlayerId'] as String?) ?? '';
+        const int maxFails = 5;
+
+        // Block the same player from playing two turns in a row
+        if (parts.length == 2 && parts[0] == expectedSyllable && senderId == lastPlayerId && lastPlayerId.isNotEmpty) {
+          String playerName = senderId;
+          try {
+            final doc = await _firestore.collection('users').doc(senderId).get();
+            playerName = doc.data()?['displayName'] ?? senderId;
+          } catch (_) {}
+          await sendMessage(
+            chatId,
+            'bot_noitu',
+            "🚫 **$playerName** vừa nối từ rồi! Hãy chờ người khác đi tiếp trước nhé.",
+          );
+          return;
+        }
         
-        // If it's a 2-syllable word starting with the expected syllable
+        // Only validate if the word starts with the expected syllable
         if (parts.length == 2 && parts[0] == expectedSyllable) {
           await _loadDictionaryIfNeeded();
           
@@ -275,34 +351,126 @@ class ChatService {
             final wordsPlayed = List<String>.from(wordChain['wordsPlayed'] ?? []);
             
             if (wordsPlayed.contains(cleanText)) {
-              await sendMessage(
-                chatId, 
-                'bot_noitu', 
-                "❌ Từ '**$text**' đã được dùng rồi! Hãy tìm từ khác bắt đầu bằng '**$expectedSyllable**'."
-              );
+              // Wrong: duplicate word — increment fail counter
+              final newFailCount = currentFailCount + 1;
+              final remaining = maxFails - newFailCount;
+
+              if (newFailCount >= maxFails) {
+                // 5 fails reached — end game and announce winner
+                await _endGameWithWinner(chatId, lastCorrectPlayerId, expectedSyllable);
+              } else {
+                await _firestore.collection('chats').doc(chatId).update({
+                  'wordChain.failCount': newFailCount,
+                });
+                await sendMessage(
+                  chatId,
+                  'bot_noitu',
+                  "❌ Từ '**$text**' đã được dùng rồi! Hãy tìm từ khác bắt đầu bằng '**$expectedSyllable**'.\n⚠️ Còn **$remaining** lần thử — trả lời sai thêm sẽ thua!"
+                );
+              }
             } else {
-              // Valid play! Update game state
+              // Valid play! Reset fail counter, update last correct player
               final nextSyllable = parts[1];
               await _firestore.collection('chats').doc(chatId).update({
                 'wordChain.lastWord': cleanText,
                 'wordChain.nextSyllable': nextSyllable,
                 'wordChain.wordsPlayed': FieldValue.arrayUnion([cleanText]),
                 'wordChain.lastPlayerId': senderId,
+                'wordChain.lastCorrectPlayerId': senderId,
+                'wordChain.failCount': 0,
               });
-              
-              // Trigger Bot response
-              _triggerBotPlay(chatId, nextSyllable, [...wordsPlayed, cleanText]);
+
+              if (botPlays) {
+                // Bot plays as a participant — responds with the next word
+                _triggerBotPlay(chatId, nextSyllable, [...wordsPlayed, cleanText]);
+              } else {
+                // Bot is only a referee — just confirm the word is valid
+                await sendMessage(
+                  chatId,
+                  'bot_noitu',
+                  "✅ '**$text**' — Hợp lệ! Tiếp theo hãy nối từ bắt đầu bằng '**$nextSyllable**'."
+                );
+              }
             }
           } else {
-            // Syllable matches but not in dictionary
-            await sendMessage(
-              chatId, 
-              'bot_noitu', 
-              "❌ Từ '**$text**' không có trong từ điển! Hãy tìm từ khác bắt đầu bằng '**$expectedSyllable**'."
-            );
+            // Wrong: syllable matches but word not in dictionary — increment fail counter
+            final newFailCount = currentFailCount + 1;
+            final remaining = maxFails - newFailCount;
+
+            if (newFailCount >= maxFails) {
+              await _endGameWithWinner(chatId, lastCorrectPlayerId, expectedSyllable);
+            } else {
+              await _firestore.collection('chats').doc(chatId).update({
+                'wordChain.failCount': newFailCount,
+              });
+              await sendMessage(
+                chatId,
+                'bot_noitu',
+                "❌ Từ '**$text**' không có trong từ điển! Hãy tìm từ khác bắt đầu bằng '**$expectedSyllable**'.\n⚠️ Còn **$remaining** lần thử — trả lời sai thêm sẽ thua!"
+              );
+            }
           }
         }
       }
+    }
+  }
+
+  // Start a new Word Chaining game session. Called by the UI after the user
+  // selects whether the bot should play as a participant or just referee.
+  Future<void> startWordChain(String chatId, String starterId, {required bool botPlays}) async {
+    final startingWord = await _getRandomWord();
+    final parts = startingWord.split(RegExp(r'\s+'));
+    final nextSyllable = parts[1];
+
+    await _firestore.collection('chats').doc(chatId).update({
+      'wordChain': {
+        'active': true,
+        'botPlays': botPlays,
+        'lastWord': startingWord,
+        'nextSyllable': nextSyllable,
+        'wordsPlayed': [startingWord],
+        'lastPlayerId': 'bot_noitu',
+        'lastCorrectPlayerId': '',
+        'failCount': 0,
+      }
+    });
+
+    final modeLabel = botPlays
+        ? "🤖 Bot sẽ **tham gia nối từ** cùng các bạn."
+        : "👥 Bot chỉ làm **trọng tài** — kiểm tra từ đúng/sai.";
+
+    await sendMessage(
+      chatId,
+      'bot_noitu',
+      "🎮 **Trò chơi Nối Từ bắt đầu!**\n$modeLabel\nTừ khởi đầu: **$startingWord**.\nHãy nối tiếp từ bắt đầu bằng chữ '**$nextSyllable**'!"
+    );
+  }
+
+  // End the game and announce winner based on lastCorrectPlayerId.
+  Future<void> _endGameWithWinner(String chatId, String winnerId, String syllable) async {
+    await _firestore.collection('chats').doc(chatId).update({
+      'wordChain.active': false,
+    });
+
+    if (winnerId.isEmpty || winnerId == 'bot_noitu') {
+      await sendMessage(
+        chatId,
+        'bot_noitu',
+        "⏹️ Đã sai **5 lần liên tiếp** với âm '**$syllable**'. Không có người chiến thắng — hòa!"
+      );
+    } else {
+      // Look up display name of the winner
+      String winnerName = winnerId;
+      try {
+        final doc = await _firestore.collection('users').doc(winnerId).get();
+        winnerName = doc.data()?['displayName'] ?? winnerId;
+      } catch (_) {}
+
+      await sendMessage(
+        chatId,
+        'bot_noitu',
+        "🏆 **$winnerName** chiến thắng!\nMọi người đã trả lời sai **5 lần liên tiếp** với âm '**$syllable**' — người nối từ đúng cuối cùng là bạn!"
+      );
     }
   }
 

@@ -77,10 +77,78 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (text.isEmpty) return;
 
     final authState = context.read<AuthBloc>().state;
-    if (authState is AuthAuthenticated) {
-      _chatService.sendMessage(widget.chatId, authState.user.uid, text);
+    if (authState is! AuthAuthenticated) return;
+    final uid = authState.user.uid;
+
+    // Intercept !noitu before sending: show a dialog so the user can pick the game mode
+    if (text.toLowerCase() == '!noitu') {
       _messageController.clear();
+      _showWordChainModeDialog(uid);
+      return;
     }
+
+    _chatService.sendMessage(widget.chatId, uid, text);
+    _messageController.clear();
+  }
+
+  void _showWordChainModeDialog(String uid) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF162435),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.videogame_asset, color: Colors.amberAccent, size: 28),
+            SizedBox(width: 10),
+            Text(
+              'Trò chơi Nối Từ',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Bạn muốn chơi cùng máy không?\n\n• Có — Bot tham gia nối từ cùng các bạn\n• Không — Bot chỉ làm trọng tài kiểm tra từ',
+          style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+        ),
+        actionsAlignment: MainAxisAlignment.spaceEvenly,
+        actions: [
+          // "Không — chỉ chơi với người"
+          TextButton.icon(
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white10,
+              foregroundColor: Colors.white70,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            icon: const Icon(Icons.people_alt_outlined, size: 18),
+            label: const Text('Không', style: TextStyle(fontWeight: FontWeight.bold)),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _chatService.startWordChain(widget.chatId, uid, botPlays: false);
+            },
+          ),
+          // "Có — chơi cùng máy"
+          TextButton.icon(
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.amberAccent.withValues(alpha: 0.15),
+              foregroundColor: Colors.amberAccent,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Colors.amberAccent, width: 1.5),
+              ),
+            ),
+            icon: const Icon(Icons.smart_toy_outlined, size: 18),
+            label: const Text('Có', style: TextStyle(fontWeight: FontWeight.bold)),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _chatService.startWordChain(widget.chatId, uid, botPlays: true);
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -837,7 +905,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   icon: const Icon(Icons.play_circle_outline_rounded, size: 16),
                   label: const Text("Bắt đầu", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                   onPressed: () {
-                    _chatService.sendMessage(widget.chatId, currentUserId, "!noitu");
+                    _showWordChainModeDialog(currentUserId);
                   },
                 ),
             ],
