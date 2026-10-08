@@ -286,7 +286,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               backgroundColor: Colors.redAccent,
             ));
           } else if (state is AuthAuthenticated) {
-            Navigator.pop(context);
+            Navigator.popUntil(context, (route) => route.isFirst);
           }
         },
         child: Container(
