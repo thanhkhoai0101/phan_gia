@@ -12,6 +12,9 @@ import 'blocs/theme/theme_bloc.dart';
 import 'blocs/theme/theme_state.dart';
 import 'blocs/feed/feed_bloc.dart';
 import 'services/feed_service.dart';
+import 'features/tasks/blocs/task_bloc.dart';
+import 'features/tasks/blocs/task_event.dart';
+import 'features/tasks/services/task_service.dart';
 import 'features/auth/login_screen.dart';
 import 'features/chat/chat_detail_screen.dart';
 import 'games/screens/tien_len/tien_len_room_screen.dart';
@@ -21,6 +24,9 @@ import 'games/blocs/caro/caro_bloc.dart';
 import 'games/services/caro_service.dart';
 import 'services/notification_service.dart';
 import 'models/user_model.dart';
+import 'features/household/blocs/household_bloc.dart';
+import 'features/household/blocs/household_event.dart';
+import 'features/household/services/household_service.dart';
 import 'firebase_options.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -50,6 +56,8 @@ void main() async {
         BlocProvider<AuthBloc>(create: (context) => AuthBloc(authService: AuthService())),
         BlocProvider<ThemeBloc>(create: (context) => ThemeBloc(initialDark: isDarkMode)),
         BlocProvider<FeedBloc>(create: (context) => FeedBloc(feedService: FeedService())),
+        BlocProvider<TaskBloc>(create: (context) => TaskBloc(TaskService())..add(LoadTasks())),
+        BlocProvider<HouseholdBloc>(create: (context) => HouseholdBloc(HouseholdService())..add(LoadMeals())),
         BlocProvider(create: (context) => ShowPasswordCubit())
       ],
       child: const MyApp(),
@@ -60,43 +68,59 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  static String? _initializedZegoUserId;
+
   void onUserLogin(UserModel user) {
     NotificationService.updateToken(user.uid);
-    ZegoUIKitPrebuiltCallInvitationService().init(
-      appID: 332535805,
-      appSign: '69ad138a7a325207f10a27865542726ead7f623ec01cbbd625e9765301e52308',
-      userID: user.uid,
-      userName: user.displayName,
-      plugins: [ZegoUIKitSignalingPlugin()],
-      notificationConfig: ZegoCallInvitationNotificationConfig(
-        androidNotificationConfig: ZegoCallAndroidNotificationConfig(
-          callChannel: ZegoCallAndroidNotificationChannelConfig(
-            channelID: "ZegoUIKit",
-            channelName: "Call Notifications",
-            sound: "call",
-            icon: "launcher_icon",
-          ),
-        ),
-        iOSNotificationConfig: ZegoCallIOSNotificationConfig(
-          isSandboxEnvironment: false,
-        ),
-      ),
-      requireConfig: (ZegoCallInvitationData data) {
-        final config = (data.type == ZegoCallInvitationType.videoCall)
-            ? ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall()
-            : ZegoUIKitPrebuiltCallConfig.oneOnOneVoiceCall();
-        return config;
-      },
-    );
+    // if (_initializedZegoUserId == user.uid && ZegoUIKitPrebuiltCallInvitationService().isInit) {
+    //   return;
+    // }
+    // _initializedZegoUserId = user.uid;
+    // ZegoUIKitPrebuiltCallInvitationService().init(
+    //   appID: 332535805,
+    //   appSign: '69ad138a7a325207f10a27865542726ead7f623ec01cbbd625e9765301e52308',
+    //   userID: user.uid,
+    //   userName: user.displayName.isNotEmpty
+    //       ? user.displayName
+    //       : (user.email.isNotEmpty ? user.email.split('@').first : user.uid),
+    //   plugins: [ZegoUIKitSignalingPlugin()],
+    //   notificationConfig: ZegoCallInvitationNotificationConfig(
+    //     androidNotificationConfig: ZegoCallAndroidNotificationConfig(
+    //       callChannel: ZegoCallAndroidNotificationChannelConfig(
+    //         channelID: "ZegoUIKit",
+    //         channelName: "Call Notifications",
+    //         sound: "call",
+    //         icon: "launcher_icon",
+    //       ),
+    //     ),
+    //     iOSNotificationConfig: ZegoCallIOSNotificationConfig(
+    //       isSandboxEnvironment: false,
+    //     ),
+    //   ),
+    //   requireConfig: (ZegoCallInvitationData data) {
+    //     final config = (data.type == ZegoCallInvitationType.videoCall)
+    //         ? ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall()
+    //         : ZegoUIKitPrebuiltCallConfig.oneOnOneVoiceCall();
+    //     return config;
+    //   },
+    // );
   }
 
   void onUserLogout() {
+    _initializedZegoUserId = null;
     ZegoUIKitPrebuiltCallInvitationService().uninit();
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (previous, current) {
+        if (previous.runtimeType != current.runtimeType) return true;
+        if (previous is AuthAuthenticated && current is AuthAuthenticated) {
+          return previous.user.uid != current.user.uid;
+        }
+        return false;
+      },
       listener: (context, state) {
         if (state is AuthAuthenticated) {
           onUserLogin(state.user);

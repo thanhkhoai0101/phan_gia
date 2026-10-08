@@ -11,6 +11,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../blocs/auth/auth_state.dart';
 import '../settings/settings_screen.dart';
 import '../feed/feed_screen.dart';
+import '../tasks/screens/task_home_screen.dart';
+import '../household/screens/household_dashboard_screen.dart';
 
 class MainNavScreen extends StatefulWidget {
   const MainNavScreen({Key? key}) : super(key: key);
@@ -28,6 +30,8 @@ class _MainNavScreenState extends State<MainNavScreen>
   final List<Widget> _screens = [
     const ChatListScreen(),
     _FeedTabWrapper(), // Tab Gia Đình
+    const TaskHomeScreen(), // Tab Việc nhà
+    const HouseholdDashboardScreen(), // Tab Nội trợ
     const ContactsScreen(),
     const GameHubScreen(),
   ];
@@ -35,6 +39,8 @@ class _MainNavScreenState extends State<MainNavScreen>
   final List<_NavItem> _navItems = const [
     _NavItem(label: 'Nhắn tin', icon: Icons.chat_bubble_outline_rounded, activeIcon: Icons.chat_bubble_rounded),
     _NavItem(label: 'Gia đình', icon: Icons.feed_outlined, activeIcon: Icons.feed_rounded),
+    _NavItem(label: 'Việc nhà', icon: Icons.task_alt_outlined, activeIcon: Icons.task_alt_rounded),
+    _NavItem(label: 'Nội trợ', icon: Icons.soup_kitchen_outlined, activeIcon: Icons.soup_kitchen_rounded),
     _NavItem(label: 'Thành viên', icon: Icons.people_outline_rounded, activeIcon: Icons.people_rounded),
     _NavItem(label: 'Giải trí', icon: Icons.videogame_asset_outlined, activeIcon: Icons.videogame_asset_rounded),
   ];

@@ -15,6 +15,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<RegisterRequested>(_onRegisterRequested);
     on<LogoutRequested>(_onLogoutRequested);
     on<UpdateProfileRequested>(_onUpdateProfileRequested);
+    on<UpdateCookingModeRequested>(_onUpdateCookingModeRequested);
     
     on<_AuthUserChanged>((event, emit) => emit(AuthAuthenticated(event.user)));
     on<_AuthUserLoggedOut>((event, emit) => emit(AuthUnauthenticated()));
@@ -83,6 +84,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           coverUrl: event.coverUrl ?? currentState.user.coverUrl,
         );
         emit(AuthAuthenticated(updatedUser));
+      }
+    }
+  }
+
+  Future<void> _onUpdateCookingModeRequested(UpdateCookingModeRequested event, Emitter<AuthState> emit) async {
+    final currentState = state;
+    if (currentState is AuthAuthenticated) {
+      // Optimistically update the UI by modifying the user model first
+      final updatedUser = currentState.user.copyWith(
+        isCookingModeEnabled: event.isEnabled,
+      );
+      emit(AuthAuthenticated(updatedUser));
+      
+      String? error = await authService.updateCookingMode(event.isEnabled);
+      if (error != null) {
+        emit(AuthError(error));
+        // Rollback
+        emit(AuthAuthenticated(currentState.user));
       }
     }
   }

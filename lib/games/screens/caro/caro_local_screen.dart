@@ -10,20 +10,32 @@ class CaroLocalScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF151515),
-      body: SafeArea(
-        child: BlocBuilder<CaroLocalBloc, CaroLocalState>(
-          builder: (context, state) {
-            return Column(
-              children: [
-                _buildHeader(context),
-                _buildPlayerTop(state),
-                Expanded(child: _buildBoard(context, state)),
-                _buildPlayerBottom(state),
-                _buildBottomBar(context, state),
-              ],
-            );
-          },
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF09141E),
+              Color(0xFF0F2634),
+              Color(0xFF0C1924),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: BlocBuilder<CaroLocalBloc, CaroLocalState>(
+            builder: (context, state) {
+              return Column(
+                children: [
+                  _buildHeader(context),
+                  _buildPlayerTop(state),
+                  Expanded(child: _buildBoard(context, state)),
+                  _buildPlayerBottom(state),
+                  _buildBottomBar(context, state),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -35,18 +47,38 @@ class CaroLocalScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            "Chơi với Máy",
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFF4EE2EC).withValues(alpha: 0.4)),
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF80DEEA), size: 18),
             ),
+          ),
+          const SizedBox(width: 12),
+          const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Tàn Cuộc Cờ Năm Quân 🤖",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 17,
+                  letterSpacing: 0.5,
+                  shadows: [Shadow(color: Color(0xFF00E5FF), blurRadius: 8)],
+                ),
+              ),
+              Text(
+                "Luyện Tập Với Máy AI",
+                style: TextStyle(color: Color(0xFF80DEEA), fontSize: 11),
+              ),
+            ],
           ),
           const Spacer(),
         ],
@@ -61,21 +93,21 @@ class CaroLocalScreen extends StatelessWidget {
     required bool isBot,
   }) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF2A2A2A),
-        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xFF0F2634).withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isTurn ? Colors.greenAccent : Colors.transparent,
-          width: 2,
+          color: isTurn ? const Color(0xFF00E5FF) : const Color(0xFF4EE2EC).withValues(alpha: 0.2),
+          width: isTurn ? 2 : 1,
         ),
         boxShadow: isTurn
             ? [
                 BoxShadow(
-                  color: Colors.greenAccent.withOpacity(0.2),
-                  blurRadius: 10,
-                  spreadRadius: 2,
+                  color: const Color(0xFF00E5FF).withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  spreadRadius: 1,
                 )
               ]
             : [],
@@ -83,16 +115,22 @@ class CaroLocalScreen extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isBlack ? Colors.black : Colors.white,
-              border: Border.all(color: Colors.grey, width: 2),
+              gradient: RadialGradient(
+                center: const Alignment(-0.35, -0.35),
+                colors: isBlack
+                    ? [const Color(0xFF616161), const Color(0xFF151515)]
+                    : [Colors.white, const Color(0xFF80DEEA)],
+              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.5),
             ),
             child: Icon(
-              isBot ? Icons.smart_toy : Icons.person,
-              color: isBlack ? Colors.white : Colors.black,
+              isBot ? Icons.smart_toy_rounded : Icons.person_rounded,
+              color: isBlack ? const Color(0xFFFFD54F) : const Color(0xFF0097A7),
+              size: 22,
             ),
           ),
           const SizedBox(width: 12),
@@ -104,8 +142,17 @@ class CaroLocalScreen extends StatelessWidget {
                   name,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isTurn ? "Đang suy nghĩ..." : (isBlack ? "Quân Đen (Đi trước)" : "Quân Trắng"),
+                  style: TextStyle(
+                    color: isTurn ? const Color(0xFF80DEEA) : Colors.white60,
+                    fontSize: 12,
+                    fontStyle: isTurn ? FontStyle.italic : FontStyle.normal,
                   ),
                 ),
               ],
@@ -113,19 +160,21 @@ class CaroLocalScreen extends StatelessWidget {
           ),
           if (isTurn)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
-                color: Colors.greenAccent.withOpacity(0.2),
+                color: const Color(0xFF00E5FF).withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.greenAccent),
+                border: Border.all(color: const Color(0xFF00E5FF), width: 1.2),
               ),
-              child: const Text(
-                "Lượt đi",
-                style: TextStyle(
-                  color: Colors.greenAccent,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
+              child: const Row(
+                children: [
+                  Icon(Icons.edit_location_alt_rounded, color: Color(0xFF00E5FF), size: 14),
+                  SizedBox(width: 4),
+                  Text(
+                    "Lượt đi",
+                    style: TextStyle(color: Color(0xFFE0F7FA), fontSize: 11, fontWeight: FontWeight.w900),
+                  ),
+                ],
               ),
             ),
         ],
@@ -134,34 +183,30 @@ class CaroLocalScreen extends StatelessWidget {
   }
 
   Widget _buildBoard(BuildContext context, CaroLocalState state) {
+    final isMyTurn = state.status == CaroLocalStatus.playing && state.turn == 1;
+
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.5),
             blurRadius: 15,
-            spreadRadius: 5,
+            spreadRadius: 3,
           )
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: InteractiveViewer(
-          minScale: 0.8,
-          maxScale: 3,
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: BoardCanvas(
-              board: state.board,
-              onTap: (row, col) {
-                if (state.status == CaroLocalStatus.playing && state.turn == 1) {
-                  context.read<CaroLocalBloc>().add(UserPlacePieceEvent(row, col));
-                }
-              },
-            ),
-          ),
+        borderRadius: BorderRadius.circular(16),
+        child: BoardCanvas(
+          board: state.board,
+          isMyTurn: isMyTurn,
+          myPiece: 1, // User is 1 (Black/X)
+          onConfirmMove: (row, col) {
+            context.read<CaroLocalBloc>().add(UserPlacePieceEvent(row, col));
+          },
         ),
       ),
     );

@@ -3,6 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../blocs/theme/theme_bloc.dart';
 import '../../blocs/theme/theme_event.dart';
 import '../../blocs/theme/theme_state.dart';
+import '../../blocs/auth/auth_bloc.dart';
+import '../../blocs/auth/auth_event.dart';
+import '../../blocs/auth/auth_state.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -25,6 +28,28 @@ class SettingsScreen extends StatelessWidget {
               // ─── Section: Giao diện ───────────────────────────────────────
               _SectionHeader(label: 'Giao diện'),
               _ThemeTile(isDark: isDark, primaryOrange: primaryOrange),
+
+              // ─── Section: Gia đình & Nội trợ ──────────────────────────────
+              _SectionHeader(label: 'Gia đình & Nội trợ'),
+              BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, authState) {
+                  bool isCookingMode = false;
+                  if (authState is AuthAuthenticated) {
+                    isCookingMode = authState.user.isCookingModeEnabled;
+                  }
+
+                  return _ToggleTile(
+                    icon: Icons.restaurant_menu_rounded,
+                    title: 'Bật chế độ nấu ăn',
+                    subtitle: 'Cho phép dùng tính năng bốc thăm món ăn',
+                    value: isCookingMode,
+                    onChanged: (val) {
+                      context.read<AuthBloc>().add(UpdateCookingModeRequested(val));
+                    },
+                    primaryOrange: primaryOrange,
+                  );
+                },
+              ),
 
               const SizedBox(height: 8),
 
@@ -278,6 +303,75 @@ class _InfoTile extends StatelessWidget {
             color: textColor.withOpacity(0.5),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─── Toggle Tile ─────────────────────────────────────────────────────────────
+class _ToggleTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final Color primaryOrange;
+
+  const _ToggleTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+    required this.primaryOrange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cardColor = Theme.of(context).cardColor;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          )
+        ],
+      ),
+      child: SwitchListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        secondary: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: primaryOrange.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: primaryOrange, size: 20),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: textColor,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 12,
+            color: textColor.withOpacity(0.5),
+          ),
+        ),
+        value: value,
+        onChanged: onChanged,
+        activeColor: primaryOrange,
       ),
     );
   }

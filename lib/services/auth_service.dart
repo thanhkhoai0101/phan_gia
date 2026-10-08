@@ -52,6 +52,7 @@ class AuthService {
                 lastLogin: today,
                 avatarUrl: data['avatarUrl'],
                 coverUrl: data['coverUrl'],
+                isCookingModeEnabled: data['isCookingModeEnabled'] ?? false,
               ));
             });
           }
@@ -125,6 +126,20 @@ class AuthService {
       if (updateData.isNotEmpty) {
         await _firestore.collection('users').doc(user.uid).update(updateData);
       }
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> updateCookingMode(bool isEnabled) async {
+    try {
+      User? user = _auth.currentUser;
+      if (user == null) return "User not logged in";
+
+      await _firestore.collection('users').doc(user.uid).update({
+        'isCookingModeEnabled': isEnabled,
+      });
       return null;
     } catch (e) {
       return e.toString();

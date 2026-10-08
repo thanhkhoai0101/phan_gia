@@ -38,3 +38,12 @@ class UpdateProfileRequested extends AuthEvent {
   @override
   List<Object?> get props => [displayName, avatarUrl, coverUrl];
 }
+
+class UpdateCookingModeRequested extends AuthEvent {
+  final bool isEnabled;
+  const UpdateCookingModeRequested(this.isEnabled);
+  
+  @override
+  List<Object> get props => [isEnabled];
+}
+

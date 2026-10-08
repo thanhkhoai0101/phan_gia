@@ -47,46 +47,58 @@ class _CaroScreenState extends State<CaroScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF151515),
-        body: SafeArea(
-          child: BlocBuilder<CaroBloc, CaroState>(
-            builder: (context, state) {
-              if (state.status == CaroStatus.initial ||
-                  state.status == CaroStatus.loading ||
-                  state.room == null) {
-                return const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFD2A679)),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF09141E), // Celestial Deep Dark Blue
+                Color(0xFF0F2634), // Xianxia Ocean Slate
+                Color(0xFF0C1924), // Dark Mystery Cyan
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: BlocBuilder<CaroBloc, CaroState>(
+              builder: (context, state) {
+                if (state.status == CaroStatus.initial ||
+                    state.status == CaroStatus.loading ||
+                    state.room == null) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF00E5FF)),
+                  );
+                }
+
+                final room = state.room!;
+                final isHost = room.hostId == widget.currentUserUid;
+                final myTurn = (isHost && room.turn == 1) || (!isHost && room.turn == 2);
+                final isWaiting = room.status == "waiting";
+
+                return Column(
+                  children: [
+                    _buildHeader(context, room.roomId),
+                    _buildPlayerCard(
+                      name: room.hostName.isNotEmpty ? room.hostName : "Host",
+                      isBlack: true,
+                      isTurn: room.turn == 1,
+                      isMe: isHost,
+                    ),
+                    if (isWaiting)
+                      _buildWaitingBanner()
+                    else
+                      Expanded(child: _buildBoard(context, state, myTurn)),
+                    _buildPlayerCard(
+                      name: room.guestName.isNotEmpty ? room.guestName : "Đang chờ...",
+                      isBlack: false,
+                      isTurn: room.turn == 2,
+                      isMe: !isHost,
+                    ),
+                    if (!isWaiting) _buildBottomBar(context, state),
+                  ],
                 );
-              }
-
-              final room = state.room!;
-              final isHost = room.hostId == widget.currentUserUid;
-              final myTurn = (isHost && room.turn == 1) || (!isHost && room.turn == 2);
-              final isWaiting = room.status == "waiting";
-
-              return Column(
-                children: [
-                  _buildHeader(context, room.roomId),
-                  _buildPlayerCard(
-                    name: room.hostName.isNotEmpty ? room.hostName : "Host",
-                    isBlack: true,
-                    isTurn: room.turn == 1,
-                    isMe: isHost,
-                  ),
-                  if (isWaiting)
-                    _buildWaitingBanner()
-                  else
-                    Expanded(child: _buildBoard(context, state, myTurn)),
-                  _buildPlayerCard(
-                    name: room.guestName.isNotEmpty ? room.guestName : "Đang chờ...",
-                    isBlack: false,
-                    isTurn: room.turn == 2,
-                    isMe: !isHost,
-                  ),
-                  if (!isWaiting) _buildBottomBar(context, state),
-                ],
-              );
-            },
+              },
+            ),
           ),
         ),
       ),
@@ -100,12 +112,35 @@ class _CaroScreenState extends State<CaroScreen> {
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back_ios, color: Colors.white),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFF4EE2EC).withValues(alpha: 0.4)),
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF80DEEA), size: 18),
+            ),
           ),
           const SizedBox(width: 12),
-          const Text(
-            "Cờ Caro Online",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Cờ Năm Quân ⚔️",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 17,
+                  letterSpacing: 0.5,
+                  shadows: [Shadow(color: Color(0xFF00E5FF), blurRadius: 8)],
+                ),
+              ),
+              Text(
+                "Cờ Caro Thần Thoại",
+                style: TextStyle(color: Color(0xFF80DEEA), fontSize: 11),
+              ),
+            ],
           ),
           const Spacer(),
           // Mã phòng - bấm để copy
@@ -115,7 +150,7 @@ class _CaroScreenState extends State<CaroScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text("Đã copy mã phòng: $roomId"),
-                  backgroundColor: const Color(0xFF2A2A2A),
+                  backgroundColor: const Color(0xFF0F2634),
                   duration: const Duration(seconds: 2),
                 ),
               );
@@ -123,20 +158,23 @@ class _CaroScreenState extends State<CaroScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF2A2A2A),
+                color: const Color(0xFF193447).withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFD2A679), width: 1.5),
+                border: Border.all(color: const Color(0xFF4EE2EC), width: 1.2),
+                boxShadow: [
+                  BoxShadow(color: const Color(0xFF00E5FF).withValues(alpha: 0.2), blurRadius: 8)
+                ],
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.copy, color: Color(0xFFD2A679), size: 14),
+                  const Icon(Icons.copy_rounded, color: Color(0xFF4EE2EC), size: 14),
                   const SizedBox(width: 6),
                   Text(
                     roomId,
                     style: const TextStyle(
-                      color: Color(0xFFD2A679),
+                      color: Color(0xFFE0F7FA),
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      fontSize: 13,
                     ),
                   ),
                 ],
@@ -300,32 +338,56 @@ class _CaroScreenState extends State<CaroScreen> {
     required bool isMe,
   }) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF222222),
-        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xFF0F2634).withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isTurn ? Colors.greenAccent : Colors.transparent,
-          width: 2,
+          color: isTurn ? const Color(0xFF00E5FF) : const Color(0xFF4EE2EC).withValues(alpha: 0.2),
+          width: isTurn ? 2 : 1,
         ),
+        boxShadow: isTurn
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF00E5FF).withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                )
+              ]
+            : [],
       ),
       child: Row(
         children: [
+          // 3D Stone Icon Avatar Badge
           Container(
-            width: 44,
-            height: 44,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isBlack ? Colors.black : Colors.white,
-              border: Border.all(color: Colors.grey.shade600, width: 2),
+              gradient: RadialGradient(
+                center: const Alignment(-0.35, -0.35),
+                colors: isBlack
+                    ? [const Color(0xFF616161), const Color(0xFF151515)]
+                    : [Colors.white, const Color(0xFF80DEEA)],
+              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: (isBlack ? Colors.black : Colors.white).withOpacity(0.3),
+                  color: (isBlack ? Colors.black : const Color(0xFF00E5FF)).withValues(alpha: 0.4),
                   blurRadius: 8,
-                  spreadRadius: 2,
                 )
               ],
+            ),
+            child: Center(
+              child: Text(
+                isBlack ? 'X' : 'O',
+                style: TextStyle(
+                  color: isBlack ? const Color(0xFFFFD54F) : const Color(0xFF0097A7),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -348,13 +410,13 @@ class _CaroScreenState extends State<CaroScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFD2A679).withOpacity(0.2),
+                          color: const Color(0xFF00E5FF).withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFD2A679), width: 1),
+                          border: Border.all(color: const Color(0xFF00E5FF), width: 1),
                         ),
                         child: const Text(
                           "Bạn",
-                          style: TextStyle(color: Color(0xFFD2A679), fontSize: 10, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: Color(0xFF80DEEA), fontSize: 10, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ]
@@ -362,23 +424,36 @@ class _CaroScreenState extends State<CaroScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  isBlack ? "Quân Đen (đi trước)" : "Quân Trắng",
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  isTurn ? "Đang đặt cờ..." : (isBlack ? "Quân Đen (Đi trước)" : "Quân Trắng"),
+                  style: TextStyle(
+                    color: isTurn ? const Color(0xFF80DEEA) : Colors.white60,
+                    fontSize: 12,
+                    fontStyle: isTurn ? FontStyle.italic : FontStyle.normal,
+                  ),
                 ),
               ],
             ),
           ),
           if (isTurn)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
-                color: Colors.greenAccent.withOpacity(0.2),
+                color: const Color(0xFF00E5FF).withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.greenAccent, width: 1),
+                border: Border.all(color: const Color(0xFF00E5FF), width: 1.2),
+                boxShadow: [
+                  BoxShadow(color: const Color(0xFF00E5FF).withValues(alpha: 0.3), blurRadius: 6)
+                ],
               ),
-              child: const Text(
-                "Lượt đi",
-                style: TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold),
+              child: const Row(
+                children: [
+                  Icon(Icons.edit_location_alt_rounded, color: Color(0xFF00E5FF), size: 14),
+                  SizedBox(width: 4),
+                  Text(
+                    "Lượt đi",
+                    style: TextStyle(color: Color(0xFFE0F7FA), fontSize: 11, fontWeight: FontWeight.w900),
+                  ),
+                ],
               ),
             ),
         ],
@@ -387,32 +462,36 @@ class _CaroScreenState extends State<CaroScreen> {
   }
 
   Widget _buildBoard(BuildContext context, CaroState state, bool myTurn) {
+    final room = state.room!;
+    final isHost = room.hostId == widget.currentUserUid;
+    final myPiece = isHost ? 1 : 2;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 16)],
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.5),
+            blurRadius: 16,
+            spreadRadius: 2,
+          ),
+        ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: InteractiveViewer(
-          minScale: 0.8,
-          maxScale: 3,
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: BoardCanvas(
-              board: state.room!.board,
-              onTap: (row, col) {
-                if (!myTurn) return;
-                if (state.status != CaroStatus.playing) return;
-                context.read<CaroBloc>().add(PlacePieceEvent(
-                  row: row,
-                  col: col,
-                  uid: widget.currentUserUid,
-                ));
-              },
-            ),
-          ),
+        borderRadius: BorderRadius.circular(16),
+        child: BoardCanvas(
+          board: room.board,
+          isMyTurn: myTurn && state.status == CaroStatus.playing,
+          myPiece: myPiece,
+          onConfirmMove: (row, col) {
+            context.read<CaroBloc>().add(PlacePieceEvent(
+              row: row,
+              col: col,
+              uid: widget.currentUserUid,
+            ));
+          },
         ),
       ),
     );
