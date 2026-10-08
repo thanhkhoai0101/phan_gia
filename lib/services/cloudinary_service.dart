@@ -4,19 +4,12 @@ import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:phan_family/config/cloudinary_config.dart';
 
-/// Dịch vụ Cloudinary: upload và xoá ảnh.
-///
-/// ⚠️  Điền API Key và API Secret vào đây.
-///     Với ứng dụng gia đình nội bộ thì chấp nhận được,
-///     nhưng nếu public thì nên dùng backend/Cloud Function để bảo vệ secret.
 class CloudinaryService {
   static const String _cloudName  = CloudinaryConfig.cloudName;
   static const String _uploadPreset = CloudinaryConfig.uploadPreset;
   static const String _apiKey    = CloudinaryConfig.apiKey;
   static const String _apiSecret  = CloudinaryConfig.apiSecret;
 
-  // ── Upload ──────────────────────────────────────────────────────────
-  /// Trả về [secure_url] nếu thành công, null nếu thất bại.
   Future<String?> uploadMediaFile(File file, {String mediaType = 'image'}) async {
     try {
       // Cloudinary gộp chung video và audio vào resource_type là 'video'
