@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:audioplayers/audioplayers.dart';
+import '../games/services/caro_service.dart';
 
 class NotificationService {
   static final FirebaseMessaging _fcm = FirebaseMessaging.instance;
@@ -62,51 +64,87 @@ class NotificationService {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   }
 
+  /// Lấy thông tin user hiện tại từ Firebase Auth
+  static User? _getCurrentFirebaseUser() {
+    return FirebaseAuth.instance.currentUser;
+  }
+
+  /// Lấy displayName từ Firestore (chính xác hơn Firebase Auth)
+  static Future<String> _getDisplayNameFromFirestore(String uid) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final data = doc.data();
+      final name = data?['displayName'] as String?;
+      if (name != null && name.isNotEmpty) return name;
+    } catch (e) {
+      debugPrint('Lỗi lấy displayName từ Firestore: $e');
+    }
+    return 'Người chơi';
+  }
+
   static void _handleNotificationClick(RemoteMessage message) {
     final type = message.data['type'];
     final chatId = message.data['chatId'];
     final roomId = message.data['roomId'];
     final otherUserId = message.data['otherUserId'];
     final otherUserName = message.data['otherUserName'];
-    
+
     if (type == 'chat' && chatId != null && chatId.isNotEmpty) {
       Future.delayed(const Duration(milliseconds: 1000), () {
         navigatorKey.currentState?.pushNamed(
-          '/chat_detail', 
+          '/chat_detail',
           arguments: {
             'chatId': chatId,
             'otherUserId': otherUserId ?? '',
             'otherUserName': otherUserName ?? 'Người dùng',
-          }
+          },
         );
       });
     } else if (type == 'game_invite' && roomId != null && roomId.isNotEmpty) {
       final inviteId = message.data['inviteId'];
       final game = message.data['game'] ?? 'tien_len';
 
-      if (inviteId != null && inviteId.isNotEmpty) {
-        FirebaseFirestore.instance.collection('invites').doc(inviteId).update({'status': 'accepted'});
-      }
-      
       Future.delayed(const Duration(milliseconds: 1000), () async {
+        // Lấy user hiện tại từ Firebase Auth
+        final firebaseUser = _getCurrentFirebaseUser();
+        final currentUid = firebaseUser?.uid ?? '';
+        // Lấy tên từ Firestore vì Firebase Auth displayName thường bị rỗng
+        final currentName = currentUid.isNotEmpty
+            ? await _getDisplayNameFromFirestore(currentUid)
+            : 'Người chơi';
+
+        // Accept invite trong Firestore
+        if (inviteId != null && inviteId.isNotEmpty) {
+          await FirebaseFirestore.instance
+              .collection('invites')
+              .doc(inviteId)
+              .update({'status': 'accepted'});
+        }
+
         if (game == 'caro') {
-          // Lấy user hiện tại
-          final uid = FirebaseFirestore.instance.app.options.projectId; // Không an toàn lắm, nhưng NotificationService không có AuthBloc
-          // Đợi đã, để lấy currentUserUid, có thể lấy từ AuthService.
-          // Nhưng route '/caro_room' cần currentUserUid.
-          // Cách an toàn là lấy từ auth Firebase
-          // Tuy nhiên, mình có thể truyền empty rồi xử lý sau, hoặc bỏ qua vì GlobalInviteListener (Overlay) đã xử lý tốt.
-          // Thật ra, khi click push, user sẽ vào app. Khi vào app, GlobalInviteListener sẽ kích hoạt nếu invite còn pending.
-          // Nhưng nếu click từ push, ta vẫn cần đẩy route.
-          // Để đơn giản, ta chỉ cần truyền roomId, và sửa route `/caro_room` trong main.dart để nó lấy UID từ AuthBloc nếu không có argument.
+          // Join phòng Caro để cập nhật guestId, guestName, status → 'playing'
+          if (currentUid.isNotEmpty) {
+            try {
+              await CaroService().joinRoom(
+                roomId: roomId,
+                uid: currentUid,
+                name: currentName,
+              );
+            } catch (e) {
+              debugPrint('Lỗi joinRoom caro: $e');
+            }
+          }
           navigatorKey.currentState?.pushNamed(
             '/caro_room',
-            arguments: {'roomId': roomId} // Không truyền uid, lát sửa main.dart
+            arguments: {
+              'roomId': roomId,
+              'currentUserUid': currentUid,
+            },
           );
         } else {
           navigatorKey.currentState?.pushNamed(
             '/tien_len_room',
-            arguments: {'roomId': roomId}
+            arguments: {'roomId': roomId},
           );
         }
       });
@@ -161,9 +199,9 @@ class NotificationService {
   }
 
   static Future<void> sendPushNotification(
-    String receiverToken, 
-    String title, 
-    String body, 
+    String receiverToken,
+    String title,
+    String body,
     {String? chatId, String? otherUserId, String? otherUserName, String? roomId, String? inviteId, String type = 'chat', String? game}
   ) async {
     try {
@@ -232,4 +270,3 @@ class NotificationService {
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint("Handling a background message: ${message.messageId}");
 }
-

@@ -187,7 +187,8 @@ class _BoardCanvasState extends State<BoardCanvas> {
                         ],
                       ),
                       child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -205,43 +206,42 @@ class _BoardCanvasState extends State<BoardCanvas> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 14),
-                          // Cancel Button
-                          GestureDetector(
-                            onTap: _cancelSelection,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
+                          Row(children: [// Cancel Button
+                            GestureDetector(
+                              onTap: _cancelSelection,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.close_rounded, color: Colors.white70, size: 16),
+                                    SizedBox(width: 4),
+                                    Text("Hủy", style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                  ],
+                                ),
                               ),
-                              child: const Row(
-                                children: [
-                                  Icon(Icons.close_rounded, color: Colors.white70, size: 16),
-                                  SizedBox(width: 4),
-                                  Text("Hủy", style: TextStyle(color: Colors.white70, fontSize: 13)),
-                                ],
+                            ),
+                            SizedBox(width: 10,),
+                            // Confirm Tick Button
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF00E5FF),
+                                foregroundColor: const Color(0xFF0D1B2A),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                elevation: 6,
+                                shadowColor: const Color(0xFF00E5FF),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          // Confirm Tick Button
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF00E5FF),
-                              foregroundColor: const Color(0xFF0D1B2A),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              elevation: 6,
-                              shadowColor: const Color(0xFF00E5FF),
-                            ),
-                            onPressed: _confirmMove,
-                            icon: const Icon(Icons.check_rounded, size: 18, color: Color(0xFF0D1B2A)),
-                            label: const Text(
-                              "ĐÁNH",
-                              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5),
-                            ),
-                          ),
+                              onPressed: _confirmMove,
+                              icon: const Icon(Icons.check_rounded, size: 18, color: Color(0xFF0D1B2A)),
+                              label: const Text(
+                                "ĐÁNH",
+                                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5),
+                              ),
+                            ),],)
                         ],
                       ),
                     ),

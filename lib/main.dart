@@ -411,10 +411,14 @@ class GlobalInviteListener extends StatelessWidget {
                       await FirebaseFirestore.instance.collection('invites').doc(inviteId).update({'status': 'accepted'});
 
                       if (isCaro && currentUser != null) {
+                        // Ưu tiên displayName từ UserModel (Firestore), fallback về "Người chơi"
+                        final guestName = (currentUser.displayName.isNotEmpty)
+                            ? currentUser.displayName
+                            : "Người chơi";
                         await CaroService().joinRoom(
                           roomId: data['roomId'],
                           uid: currentUser.uid,
-                          name: currentUser.displayName ?? "Guest",
+                          name: guestName,
                         );
                         NotificationService.navigatorKey.currentState?.pushNamed(
                           '/caro_room',
